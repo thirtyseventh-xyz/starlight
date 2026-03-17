@@ -20,7 +20,7 @@ def recieve_auth():
     code = request.args.get("code")
 
     if code is None:
-        return {"error": "wow either you broke something really bad, or you found this endpoint and never tried to do anything important in the first place. if you didn't expect an error, please contact @thirtyseven on slack"}
+        return {"error": "wow either you broke something really bad, or you found this endpoint and never tried to do anything important in the first place. if you didn't expect an error, please contact @thirtyseven on slack"}, 400
 
     token_request_payload = {
         "client_id": str(os.environ.get("HCA_OAUTH_CLIENT_ID")),
@@ -37,17 +37,7 @@ def recieve_auth():
     token_request_response = token_request_result.json()
 
     access_token = token_request_response['access_token']
-    jwt_token = token_request_response['id_token']
 
-    jwt_public = requests.get("https://auth.hackclub.com/oauth/discovery/keys")
-    jwt_json = jwt_public.json()
-
-    jwk = jwt_json['keys'][0]
-    public_key = RSAAlgorithm.from_jwk(json.dumps(jwk))
-
-    jwt_data = jwt.decode(jwt_token,public_key,["RS256"],leeway=10, audience=os.environ.get("HCA_OAUTH_CLIENT_ID"))
-
-    breakpoint()
     return redirect()
 
 
