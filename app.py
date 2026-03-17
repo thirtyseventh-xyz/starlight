@@ -30,6 +30,8 @@ def recieve_auth():
     token_request_result = requests.post("https://auth.hackclub.com/oauth/token",data=token_request_payload)
 
     token_request_response = token_request_result.json()
+
+    #breakpoint()
     access_token = token_request_response['access_token']
     jwt_token = token_request_response['id_token']
 
@@ -38,7 +40,7 @@ def recieve_auth():
 
     jwt_data = jwt.decode(jwt_token,jwt_public,["RSA256"])
 
-
+    #breakpoint()
     return redirect()
 
 
