@@ -33,9 +33,11 @@ def recieve_auth():
     access_token = token_request_response['access_token']
     jwt_token = token_request_response['id_token']
 
-    jwt_public =
+    jwt_public = requests.get("https://auth.hackclub.com/oauth/discovery/keys")
+    jwt_public = jwt_public.json().get("n")
 
-    jwt_data = jwt.decode(jwt_token,)
+    jwt_data = jwt.decode(jwt_token,jwt_public,["RSA256"])
+
 
     return redirect()
 
