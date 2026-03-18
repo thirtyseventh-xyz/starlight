@@ -51,6 +51,7 @@ def recieve_auth():
     return redirect(os.environ.get("PROD_MAIN_URL")+"/auth/callback")
 
 @app.route("/tempapi/rsvp-submissions")
+@limiter.limit("10 per minute")
 def send_submissions():
     headers = {"Authorization": "Bearer " + str(os.environ.get("FILLOUT_API_KEY"))}
     url = "https://api.fillout.com/v1/api/forms/" + str(os.environ.get("FILLOUT_FORM_ID")) + "/submissions?limit=50&sort=asc"
