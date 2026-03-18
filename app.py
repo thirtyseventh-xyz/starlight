@@ -35,10 +35,16 @@ def recieve_auth():
         return token_request_result.status_code
 
     token_request_response = token_request_result.json()
-
     access_token = token_request_response['access_token']
 
-    return redirect()
+    headers = {
+        "Authorization": "Bearer " +access_token
+    }
+
+    response = requests.get("https://auth.hackclub.com/api/v1/me",headers=headers)
+    response_json = response.json()
+
+    return redirect(os.environ.get("PROD_MAIN_URL")+"/auth/callback")
 
 
 
