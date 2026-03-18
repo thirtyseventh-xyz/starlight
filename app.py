@@ -4,9 +4,12 @@ from flask import Flask
 from flask import redirect
 from flask import request
 from dotenv import load_dotenv
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 load_dotenv()
 app = Flask(__name__)
+limiter = Limiter(get_remote_address,app=app, default_limits=["200 per day", "50 per hour"] )
 
 @app.route("/")
 def get_out():
@@ -14,6 +17,8 @@ def get_out():
 
 @app.route("/oauth/callback")
 def recieve_auth():
+    if bool(os.environ.get("DISABLE_OAUTH")):
+        return "endpoint currently disabled", 423
     code = request.args.get("code")
 
     if code is None:
@@ -41,7 +46,21 @@ def recieve_auth():
     hca_user_data_request = requests.get("https://auth.hackclub.com/api/v1/me",headers=hca_authed_req_headers)
     hca_user_data_json = hca_user_data_request.json()
 
+    breakpoint()
+
     return redirect(os.environ.get("PROD_MAIN_URL")+"/auth/callback")
+
+@app.route("/tempapi/rsvp-submissions")
+def send_submissions():
+    headers = {"Authorization": "Bearer " + str(os.environ.get("FILLOUT_API_KEY"))}
+    url = "https://api.fillout.com/v1/api/forms/" + str(os.environ.get("FILLOUT_FORM_ID")) + "/submissions?limit=50&sort=asc"
+
+    response = requests.get(url,headers=headers)
+
+    if response.status_code == 200:
+        return {"total_submissions":response.json()['total_responses']}
+    else:
+        return {"total_submissions":-1},500
 
 
 
