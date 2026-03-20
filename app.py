@@ -3,11 +3,11 @@ import requests
 from flask import Flask
 from flask import redirect
 from flask import request
-#from dotenv import load_dotenv
+from dotenv import load_dotenv
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
-#load_dotenv()
+load_dotenv()
 app = Flask(__name__)
 limiter = Limiter(get_remote_address,app=app, default_limits=["20000 per day", "5000 per hour"] )
 
