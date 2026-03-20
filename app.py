@@ -23,7 +23,7 @@ def recieve_auth():
     code = request.args.get("code")
 
     if code is None:
-        return "wow either something has gone horribly wrong, or you found this endpoint and never tried to do anything important in the first place. if you didn't expect an error, please contact @thirtyseven on slack", 400
+        return "either something has gone horribly wrong, or you found this endpoint and never tried to do anything important in the first place. if you didn't expect an error, please contact @thirtyseven on slack", 400
 
     token_request_payload = {
         "client_id": str(os.environ.get("HCA_OAUTH_CLIENT_ID")),
@@ -35,7 +35,7 @@ def recieve_auth():
     token_request_result = requests.post("https://auth.hackclub.com/oauth/token",data=token_request_payload)
 
     if token_request_result.status_code != 200 and token_request_result.status_code != 201:
-        return "wow something broke really bad, please let @thirtyseven know on slack that this happened", token_request_result.status_code
+        return "something has gone very wrong server side (probably), please let @thirtyseven know on slack that this happened", token_request_result.status_code
 
     token_request_response = token_request_result.json()
     access_token = token_request_response['access_token']
@@ -59,10 +59,12 @@ def send_submissions():
 
     response = requests.get(url,headers=headers)
 
+    custom_response_headers = {"Access-Control-Allow-Origin": "*"}
+
     if response.status_code == 200:
-        return {"total_submissions":response.json()['totalResponses']}
+        return {"total_submissions":response.json()['totalResponses']},200,custom_response_headers
     else:
-        return {"total_submissions":-1},500
+        return {"total_submissions":-1},500,custom_response_headers
 
 
 
