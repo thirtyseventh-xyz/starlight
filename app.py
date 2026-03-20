@@ -3,11 +3,11 @@ import requests
 from flask import Flask
 from flask import redirect
 from flask import request
-from dotenv import load_dotenv
+#from dotenv import load_dotenv
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
-load_dotenv()
+#load_dotenv()
 app = Flask(__name__)
 limiter = Limiter(get_remote_address,app=app, default_limits=["20000 per day", "5000 per hour"] )
 
@@ -64,10 +64,5 @@ def send_submissions():
     if response.status_code == 200:
         return {"total_submissions":response.json()['totalResponses']},200,custom_response_headers
     else:
+        print("[ERROR] call to fillout api did not return successfully\n|    request returned http code "+str(response.status_code)+"\n\    with error: "+str(response.json()['message']))
         return {"total_submissions":-1},500,custom_response_headers
-
-
-
-
-
-
