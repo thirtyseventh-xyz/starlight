@@ -1,15 +1,28 @@
+import ast
 import os
 import requests
+import base64
 from flask import Flask
 from flask import redirect
 from flask import request
 from dotenv import load_dotenv
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 load_dotenv()
+
 app = Flask(__name__)
 limiter = Limiter(get_remote_address,app=app, default_limits=["20000 per day", "5000 per hour"] )
+
+def encrypt_token(token, id):
+    key = base64.urlsafe_b64decode(os.environ.get("ENCRYPTION_KEY"))
+    aesgcm = AESGCM(key)
+
+    nonce = os.urandom(12)
+
+    ciphertext = aesgcm.encrypt(nonce,token.encode(),id.encode())
+    return base64.urlsafe_b64encode(nonce + ciphertext).decode()
 
 @app.route("/")
 def get_out():
@@ -17,7 +30,7 @@ def get_out():
 
 @app.route("/oauth/callback")
 def recieve_auth():
-    if bool(os.environ.get("DISABLE_OAUTH")):
+    if os.environ.get("DISABLE_OAUTH").lower() == "true":
         return "endpoint currently disabled", 423
 
     code = request.args.get("code")
@@ -46,6 +59,11 @@ def recieve_auth():
 
     hca_user_data_request = requests.get("https://auth.hackclub.com/api/v1/me",headers=hca_authed_req_headers)
     hca_user_data_json = hca_user_data_request.json()
+
+    hca_id = hca_user_data_json['identity']['id']
+    ysws_eligible = hca_user_data_json['identity']['ysws_eligible']
+
+    encrypted_token = encrypt_token(access_token,hca_id)
 
     breakpoint()
 
