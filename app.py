@@ -1,4 +1,7 @@
 import os
+from encodings import search_function
+from idlelib.searchengine import search_reverse
+
 import requests
 import base64
 from flask import Flask
@@ -8,8 +11,11 @@ from dotenv import load_dotenv
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from slack_sdk import WebClient
 
 load_dotenv()
+
+slack_client = WebClient(token=os.environ.get("SLACK_BOT_TOKEN"))
 
 app = Flask(__name__)
 limiter = Limiter(get_remote_address,app=app, default_limits=["20000 per day", "5000 per hour"] )
@@ -39,6 +45,10 @@ main_url = os.environ.get("PROD_MAIN_URL")
 def get_out():
     return redirect(main_url)
 
+@app.errorhandler(404)
+def fancy_404(e):
+    return redirect(main_url+"/error?code=404&message=page+not+found%2E+maybe+you+are+looking+for+this+page+on+the+main+sparkle+domain+and+not+the+api%3F")
+
 @app.route("/oauth/callback")
 def recieve_auth(): #handle the data returned from the oauth endpoint
     #basic hecks and stuffc
@@ -48,6 +58,7 @@ def recieve_auth(): #handle the data returned from the oauth endpoint
     code = request.args.get("code")
 
     if code is None:
+        print("the code passed to the oauth callback param was none, someone broke something")
         return "either something has gone horribly wrong, or you found this endpoint and never tried to do anything important in the first place. if you didn't expect an error, please contact @thirtyseven on slack", 400
 
     #aquire the access token from hca
@@ -61,7 +72,8 @@ def recieve_auth(): #handle the data returned from the oauth endpoint
     token_request_result = requests.post("https://auth.hackclub.com/oauth/token",data=token_request_payload)
 
     if token_request_result.status_code != 200 and token_request_result.status_code != 201:
-        return "something has gone very wrong server side (probably), please let @thirtyseven know on slack that this happened", token_request_result.status_code
+        print("request to hca to get access token failed with code "+str(token_request_result.status_code)+"\nit failed with data "+str(token_request_result.json()))
+        return "something has gone very wrong server side (probably), please let @thirtyseven know on slack that this happened", 500
 
     token_request_response = token_request_result.json()
     access_token = token_request_response['access_token']
@@ -83,19 +95,19 @@ def recieve_auth(): #handle the data returned from the oauth endpoint
     encrypted_token = encrypt_token(access_token,hca_id) #encrypt stuff so we dont get jumped by meta
 
     #init airtable data and stuff
-    auth_table_url = "https://api.airtable.com/v0/"+os.environ.get("AIRTABLE_BASE_ID")+"/"+os.environ.get("AIRTABLE_TABLE_ID") #table where entries for auth system are
+    auth_table_url = "https://api.airtable.com/v0/"+os.environ.get("AIRTABLE_BASE_ID")+"/"+os.environ.get("AIRTABLE_AUTH_TABLE_ID") #table where entries for auth system are
     airtable_req_headers = {
         "Authorization": "Bearer "+os.environ.get("AIRTABLE_API_KEY")
     }
-    #check if an entry for the oidc id already exists in airtable
-    url = auth_table_url+"?filterByFormula=%7BOIDC%20ID%7D%3D'"+hca_id+"'"
-    account_search_result = requests.get(url,headers=airtable_req_headers) #get entries with an oidc matching the current one
-    account_search_result = account_search_result.json()
 
+    #check if an entry for the oidc id already exists in airtable
+    search_url = auth_table_url+"?filterByFormula=%7BOIDC%20ID%7D%3D'"+hca_id+"'"
+    account_search_result = requests.get(search_url,headers=airtable_req_headers) #get entries with an oidc matching the current one
+    account_search_result = account_search_result.json()
 
     if not len(account_search_result['records']) == 1: # check if there is any auth accounts with the same oidc as the current user
         #new account creation #TODO: make something reflect this in the other table, the one used for basic account management
-        airtable_new_acc_payload = {
+        airtable_new_auth_payload = { #data for new entry in auth table
             "records":[
                 {
                    "fields": {
@@ -109,11 +121,32 @@ def recieve_auth(): #handle the data returned from the oauth endpoint
             ]
         }
 
-        airtable_response = requests.post(auth_table_url,headers=airtable_req_headers,json=airtable_new_acc_payload)
+        airtable_response = requests.post(auth_table_url,headers=airtable_req_headers,json=airtable_new_auth_payload) #create user in auth table
 
         if airtable_response.status_code != 200:
             print("airtable identity storing failed with http code "+str(airtable_response.status_code)+"\nit failed with response"+str(airtable_response.json()))
             return "oh crap something failed trying to create your account in our system. please contact @thirtyseven on slack immediately",500
+
+        slack_user_data = slack_client.users_profile_get(user=hca_user_data_json['identity']['slack_id'])
+        slack_display_name = slack_user_data['profile']['display_name_normalized']
+
+        airtable_new_user_payload = {
+            "records":[
+                {
+                    "fields": {
+                        "Username": slack_display_name,
+                        "Auth Entry": [airtable_response.json()['records'][0]['id']]
+                    }
+                }
+            ]
+        }
+
+        search_url = "https://api.airtable.com/v0/"+os.environ.get("AIRTABLE_BASE_ID")+"/"+os.environ.get("AIRTABLE_USERS_TABLE_ID")
+        account_creation_response = requests.post(search_url,headers=airtable_req_headers,json=airtable_new_user_payload)
+
+
+        breakpoint()
+
 
 
 
