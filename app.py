@@ -78,7 +78,7 @@ def recieve_auth(): #handle the data returned from the oauth endpoint
     ysws_eligible = hca_user_data_json['identity']['ysws_eligible']
 
     if not ysws_eligible: #get out if youre not eligible
-        return redirect(main_url+"/error?code=401&message=you+are+not+eligible+to+participate+in+ysws+events")
+        return redirect(main_url+"/error?code=403&message=you+are+not+eligible+to+participate+in+ysws+events")
 
     encrypted_token = encrypt_token(access_token,hca_id) #encrypt stuff so we dont get jumped by meta
 
