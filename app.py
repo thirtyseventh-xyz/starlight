@@ -1,4 +1,3 @@
-import ast
 import os
 import requests
 import base64
@@ -42,7 +41,7 @@ def get_out():
 
 @app.route("/oauth/callback")
 def recieve_auth(): #handle the data returned from the oauth endpoint
-    #basic checks and stuff
+    #basic hecks and stuffc
     if os.environ.get("DISABLE_OAUTH").lower() == "true":
         return "endpoint currently disabled", 423
 
@@ -83,31 +82,39 @@ def recieve_auth(): #handle the data returned from the oauth endpoint
 
     encrypted_token = encrypt_token(access_token,hca_id) #encrypt stuff so we dont get jumped by meta
 
-    #create entry in airtable #TODO: needs to be changed to check airtable to see if an entry for this user (found using oidc id) already exists
+    #init airtable data and stuff
     auth_table_url = "https://api.airtable.com/v0/"+os.environ.get("AIRTABLE_BASE_ID")+"/"+os.environ.get("AIRTABLE_TABLE_ID") #table where entries for auth system are
     airtable_req_headers = {
-        "Authorization": "Bearer "+os.environ.get("AIRTABLE_API_KEY"),
-        "Content-Type": "application/json"
+        "Authorization": "Bearer "+os.environ.get("AIRTABLE_API_KEY")
     }
-    airtable_new_acc_payload = {
-        "records":[
-            {
-               "fields": {
-                   "OIDC ID": hca_id,
-                   "Name": hca_user_data_json['identity']['first_name'] + " " + hca_user_data_json['identity']['last_name'],
-                   "Encrypted HCA Access Token": encrypted_token,
-                   "Eligible": ysws_eligible,
-                   "Slack ID": hca_user_data_json['identity']['slack_id']
-               }
-            }
-        ]
-    }
+    #check if an entry for the oidc id already exists in airtable
+    url = auth_table_url+"?filterByFormula=%7BOIDC%20ID%7D%3D'"+hca_id+"'"
+    account_search_result = requests.get(url,headers=airtable_req_headers) #get entries with an oidc matching the current one
+    account_search_result = account_search_result.json()
 
-    airtable_response = requests.post(auth_table_url,headers=airtable_req_headers,json=airtable_new_acc_payload)
 
-    if airtable_response.status_code != 200:
-        print("airtable identity storing failed with http code "+str(airtable_response.status_code)+"\nit failed with response"+str(airtable_response.json()))
-        return "oh crap something failed trying to store your identity in our system. please contact @thirtyseven on slack immediately",500
+    if not len(account_search_result['records']) == 1: # check if there is any auth accounts with the same oidc as the current user
+        #new account creation #TODO: make something reflect this in the other table, the one used for basic account management
+        airtable_new_acc_payload = {
+            "records":[
+                {
+                   "fields": {
+                       "OIDC ID": hca_id,
+                       "Name": hca_user_data_json['identity']['first_name'] + " " + hca_user_data_json['identity']['last_name'],
+                       "Encrypted HCA Access Token": encrypted_token,
+                       "Eligible": ysws_eligible,
+                       "Slack ID": hca_user_data_json['identity']['slack_id']
+                   }
+                }
+            ]
+        }
+
+        airtable_response = requests.post(auth_table_url,headers=airtable_req_headers,json=airtable_new_acc_payload)
+
+        if airtable_response.status_code != 200:
+            print("airtable identity storing failed with http code "+str(airtable_response.status_code)+"\nit failed with response"+str(airtable_response.json()))
+            return "oh crap something failed trying to create your account in our system. please contact @thirtyseven on slack immediately",500
+
 
 
     return redirect(main_url+"/auth/callback")
