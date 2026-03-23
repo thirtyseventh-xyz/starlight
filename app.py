@@ -1,7 +1,4 @@
 import os
-from encodings import search_function
-from idlelib.searchengine import search_reverse
-
 import requests
 import base64
 from flask import Flask
@@ -124,8 +121,8 @@ def recieve_auth(): #handle the data returned from the oauth endpoint
         airtable_response = requests.post(auth_table_url,headers=airtable_req_headers,json=airtable_new_auth_payload) #create user in auth table
 
         if airtable_response.status_code != 200:
-            print("airtable identity storing failed with http code "+str(airtable_response.status_code)+"\nit failed with response"+str(airtable_response.json()))
-            return "oh crap something failed trying to create your account in our system. please contact @thirtyseven on slack immediately",500
+            print("airtable identity storing in auth table failed with http code "+str(airtable_response.status_code)+"\nit failed with response"+str(airtable_response.json()))
+            return redirect(main_url+"/error?code=500&message=something+failed+trying+to+create+your+account+in+our+system%2E+please+contact+%40thirtyseven+on+slack+immediately")
 
         slack_user_data = slack_client.users_profile_get(user=hca_user_data_json['identity']['slack_id'])
         slack_display_name = slack_user_data['profile']['display_name_normalized']
@@ -144,11 +141,9 @@ def recieve_auth(): #handle the data returned from the oauth endpoint
         search_url = "https://api.airtable.com/v0/"+os.environ.get("AIRTABLE_BASE_ID")+"/"+os.environ.get("AIRTABLE_USERS_TABLE_ID")
         account_creation_response = requests.post(search_url,headers=airtable_req_headers,json=airtable_new_user_payload)
 
-
-        breakpoint()
-
-
-
+        if account_creation_response.status_code != 200:
+            print("airtable identity storing in users table failed with http code "+str(account_creation_response.status_code)+"\nit failed with response"+str(account_creation_response.json()))
+            return redirect(main_url+"/error?code=500&message=something+failed+trying+to+create+your+account+in+our+system%2E+please+contact+%40thirtyseven+on+slack+immediately")
 
     return redirect(main_url+"/auth/callback")
 
@@ -157,7 +152,7 @@ def recieve_auth(): #handle the data returned from the oauth endpoint
 def send_submissions():
     #get number of rsvps from fillout
     headers = {"Authorization": "Bearer " + str(os.environ.get("FILLOUT_API_KEY"))}
-    url = "https://api.fillout.com/v1/api/forms/" + str(os.environ.get("FILLOUT_FORM_ID")) + "/submissions?limit=50&sort=asc"
+    url = "https://api.fillout.com/v1/api/forms/" + str(os.environ.get("FILLOUT_FORM_ID")) + "/submissions?limit=150&sort=asc"
 
     response = requests.get(url,headers=headers)
 
