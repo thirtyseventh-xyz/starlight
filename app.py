@@ -150,17 +150,31 @@ def recieve_auth(): #handle the data returned from the oauth endpoint
 @app.route("/tempapi/rsvp-submissions")
 @limiter.limit("60 per minute")
 def send_submissions():
+    submission_request_cap = 150
+    
     #get number of rsvps from fillout
     headers = {"Authorization": "Bearer " + str(os.environ.get("FILLOUT_API_KEY"))}
-    url = "https://api.fillout.com/v1/api/forms/" + str(os.environ.get("FILLOUT_FORM_ID")) + "/submissions?limit=150&sort=asc"
+    url = "https://api.fillout.com/v1/api/forms/" + str(os.environ.get("FILLOUT_FORM_ID")) + "/submissions?limit=" + str(submission_request_cap)
 
     response = requests.get(url,headers=headers)
+
+    offset = 0
+    submissions = response.json()['totalResponses']
+    while submissions % submission_request_cap == 0:
+        offset += submission_request_cap
+        url = "https://api.fillout.com/v1/api/forms/" + str(os.environ.get("FILLOUT_FORM_ID")) + "/submissions?limit=" + str(submission_request_cap) + "&offset=" + str(offset)
+
+        response = requests.get(url, headers=headers)
+        if response.json()['totalResponses'] == 0:
+            break
+        submissions += response.json()['totalResponses']
+
 
     #send it to the client
     custom_response_headers = {"Access-Control-Allow-Origin": "*"}
 
     if response.status_code == 200:
-        return {"total_submissions":response.json()['totalResponses']},200,custom_response_headers
+        return {"total_submissions":submissions},200,custom_response_headers
     else:
         print("[ERROR] call to fillout api did not return successfully\n|    request returned http code "+str(response.status_code)+"\n\    with error: "+str(response.json()['message']))
         return {"total_submissions":-1},500,custom_response_headers
