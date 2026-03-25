@@ -48,7 +48,7 @@ def fancy_404(e):
 
 @app.route("/oauth/callback")
 def recieve_auth(): #handle the data returned from the oauth endpoint
-    #basic hecks and stuffc
+    #basic checks and stuff
     if os.environ.get("DISABLE_OAUTH").lower() == "true":
         return "endpoint currently disabled", 423
 
@@ -56,7 +56,7 @@ def recieve_auth(): #handle the data returned from the oauth endpoint
 
     if code is None:
         print("the code passed to the oauth callback param was none, someone broke something")
-        return "either something has gone horribly wrong, or you found this endpoint and never tried to do anything important in the first place. if you didn't expect an error, please contact @thirtyseven on slack", 400
+        return redirect(main_url+ "/error?code=400&message=either%20something%20has%20gone%20horribly%20wrong%2C%20or%20you%20found%20this%20endpoint%20and%20never%20tried%20to%20do%20anything%20important%20in%20the%20first%20place%2E%20if%20you%20didn't%20expect%20an%20error%2C%20please%20contact%20%40thirtyseven%20on%20slack")
 
     #aquire the access token from hca
     token_request_payload = {
