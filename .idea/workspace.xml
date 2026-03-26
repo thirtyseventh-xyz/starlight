@@ -4,11 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f8a2fb98-18c4-499a-8795-0843966fdd4e" name="Changes" comment="refactoring a bunch of code to be easier to read and stuff">
-      <change afterPath="$PROJECT_DIR$/auth.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/app.py" afterDir="false" />
-    </list>
+    <list default="true" id="f8a2fb98-18c4-499a-8795-0843966fdd4e" name="Changes" comment="convert all the errors to be the nice error page, cleaned up some stuff" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -108,7 +104,7 @@
       <recent name="D:\Programming\Sparkle-API" />
     </key>
   </component>
-  <component name="RunManager">
+  <component name="RunManager" selected="Docker.Dockerfile">
     <configuration name="Flask" type="Python.FlaskServer" nameIsGenerated="true">
       <module name="Sparkle-API" />
       <option name="ENV_FILES" value="" />
@@ -124,6 +120,23 @@
       <option name="launchJavascriptDebuger" value="false" />
       <method v="2" />
     </configuration>
+    <configuration name="Dockerfile" type="docker-deploy" factoryName="dockerfile" temporary="true" server-name="Docker">
+      <deployment type="dockerfile">
+        <settings>
+          <option name="sourceFilePath" value="Dockerfile" />
+        </settings>
+      </deployment>
+      <method v="2" />
+    </configuration>
+    <configuration default="true" type="docker-deploy" factoryName="dockerfile" temporary="true">
+      <deployment type="dockerfile" />
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Docker.Dockerfile" />
+      </list>
+    </recent_temporary>
   </component>
   <component name="SharedIndexes">
     <attachedChunks>
@@ -152,7 +165,7 @@
       <workItem from="1774403366319" duration="599000" />
       <workItem from="1774438937376" duration="560000" />
       <workItem from="1774467571789" duration="1204000" />
-      <workItem from="1774483125719" duration="3105000" />
+      <workItem from="1774483125719" duration="3148000" />
     </task>
     <task id="LOCAL-00001" summary="initial commit">
       <option name="closed" value="true" />
@@ -258,7 +271,15 @@
       <option name="project" value="LOCAL" />
       <updated>1774403964694</updated>
     </task>
-    <option name="localTasksCounter" value="14" />
+    <task id="LOCAL-00014" summary="convert all the errors to be the nice error page, cleaned up some stuff">
+      <option name="closed" value="true" />
+      <created>1774486282839</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1774486282839</updated>
+    </task>
+    <option name="localTasksCounter" value="15" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -289,7 +310,8 @@
     <MESSAGE value="rate limited the fillout thing" />
     <MESSAGE value="fillout api done, rate limited" />
     <MESSAGE value="fixed the broken project config and made some other small changes to the api" />
-    <option name="LAST_COMMIT_MESSAGE" value="fixed the broken project config and made some other small changes to the api" />
+    <MESSAGE value="convert all the errors to be the nice error page, cleaned up some stuff" />
+    <option name="LAST_COMMIT_MESSAGE" value="convert all the errors to be the nice error page, cleaned up some stuff" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/Sparkle_API$Flask.coverage" NAME="Flask Coverage Results" MODIFIED="1773923873104" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
