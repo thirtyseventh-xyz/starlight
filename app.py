@@ -1,13 +1,13 @@
 import os
 import requests
 import base64
+import auth
 from flask import Flask
 from flask import redirect
 from flask import request
 from dotenv import load_dotenv
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from slack_sdk import WebClient
 
 load_dotenv()
@@ -17,23 +17,7 @@ slack_client = WebClient(token=os.environ.get("SLACK_BOT_TOKEN"))
 app = Flask(__name__)
 limiter = Limiter(get_remote_address,app=app, default_limits=["20000 per day", "5000 per hour"] )
 
-key = base64.urlsafe_b64decode(os.environ.get("ENCRYPTION_KEY"))
-def encrypt_token(token, id):#i had to get claude (booo) to help with some of this, as i have no idea how encryption works. i have done my research outside of that, making sure what it told me to do makes sense
-    aesgcm = AESGCM(key) #load the key
-
-    nonce = os.urandom(12) #generate a random 96 bit nonce
-
-    ciphertext = aesgcm.encrypt(nonce,token.encode(),id.encode()) #actually encrypt ti
-    return base64.urlsafe_b64encode(nonce + ciphertext).decode() #encode the nonce with it
-
-def decrypt_token(encrypted_token, id):
-    data = base64.urlsafe_b64decode(encrypted_token.encode()) #read the encrypted token properly
-    aesgcm = AESGCM(key) #load the key
-
-    nonce, ciphertext = data[:12], data[12:] #split the nonce and ciphertext
-
-    access_token = aesgcm.decrypt(nonce,ciphertext,id.encode()).decode() #decrypt the thing
-    return access_token
+encryption_key = base64.urlsafe_b64decode(os.environ.get("ENCRYPTION_KEY"))
 
 main_url = os.environ.get("PROD_MAIN_URL")
 
@@ -50,7 +34,7 @@ def fancy_404(e):
 def recieve_auth(): #handle the data returned from the oauth endpoint
     #basic checks and stuff
     if os.environ.get("DISABLE_OAUTH").lower() == "true":
-        return "endpoint currently disabled", 423
+        return redirect(main_url+"/error?code=423&message=signin+is+currently+disabled")
 
     code = request.args.get("code")
 
@@ -68,16 +52,14 @@ def recieve_auth(): #handle the data returned from the oauth endpoint
     }
     token_request_result = requests.post("https://auth.hackclub.com/oauth/token",data=token_request_payload)
 
-    if token_request_result.status_code != 200 and token_request_result.status_code != 201:
+    if token_request_result.status_code != 200:
         print("request to hca to get access token failed with code "+str(token_request_result.status_code)+"\nit failed with data "+str(token_request_result.json()))
-        return "something has gone very wrong server side (probably), please let @thirtyseven know on slack that this happened", 500
+        return redirect(main_url+"/error?code=500&message=something+has+gone+very+wrong+server+side+%28probably%29%2C+please+let+%40thirtyseven+know+on+slack+that+this+happened")
 
     token_request_response = token_request_result.json()
     access_token = token_request_response['access_token']
 
-    hca_authed_req_headers = {
-        "Authorization": "Bearer "+access_token
-    }
+    hca_authed_req_headers = {"Authorization": "Bearer "+access_token}
 
     #get userdata from hca
     hca_user_data_request = requests.get("https://auth.hackclub.com/api/v1/me",headers=hca_authed_req_headers)
@@ -89,13 +71,11 @@ def recieve_auth(): #handle the data returned from the oauth endpoint
     if not ysws_eligible: #get out if youre not eligible
         return redirect(main_url+"/error?code=403&message=you+are+not+eligible+to+participate+in+ysws+events")
 
-    encrypted_token = encrypt_token(access_token,hca_id) #encrypt stuff so we dont get jumped by meta
+    encrypted_token = auth.encrypt_token(access_token, hca_id, encryption_key) #encrypt stuff so we dont get jumped by meta
 
     #init airtable data and stuff
     auth_table_url = "https://api.airtable.com/v0/"+os.environ.get("AIRTABLE_BASE_ID")+"/"+os.environ.get("AIRTABLE_AUTH_TABLE_ID") #table where entries for auth system are
-    airtable_req_headers = {
-        "Authorization": "Bearer "+os.environ.get("AIRTABLE_API_KEY")
-    }
+    airtable_req_headers = {"Authorization": "Bearer "+os.environ.get("AIRTABLE_API_KEY")}
 
     #check if an entry for the oidc id already exists in airtable
     search_url = auth_table_url+"?filterByFormula=%7BOIDC%20ID%7D%3D'"+hca_id+"'"
@@ -103,7 +83,7 @@ def recieve_auth(): #handle the data returned from the oauth endpoint
     account_search_result = account_search_result.json()
 
     if not len(account_search_result['records']) == 1: # check if there is any auth accounts with the same oidc as the current user
-        #new account creation #TODO: make something reflect this in the other table, the one used for basic account management
+        #new account creation
         airtable_new_auth_payload = { #data for new entry in auth table
             "records":[
                 {
@@ -158,6 +138,7 @@ def send_submissions():
 
     response = requests.get(url,headers=headers)
 
+    #iteration bs to repeat the submissions request until we get all of them
     offset = 0
     submissions = response.json()['totalResponses']
     while submissions % submission_request_cap == 0:
@@ -176,5 +157,5 @@ def send_submissions():
     if response.status_code == 200:
         return {"total_submissions":submissions},200,custom_response_headers
     else:
-        print("[ERROR] call to fillout api did not return successfully\n|    request returned http code "+str(response.status_code)+"\n\    with error: "+str(response.json()['message']))
+        print("call to fillout api did not return successfully\n|    request returned http code "+str(response.status_code)+"\n\    with error: "+str(response.json()['message']))
         return {"total_submissions":-1},500,custom_response_headers
