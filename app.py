@@ -2,12 +2,13 @@ import os
 import requests
 import base64
 import auth
+import hashlib
 from flask import Flask
 from flask import redirect
 from flask import request
-from dotenv import load_dotenv
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from dotenv import load_dotenv
 from slack_sdk import WebClient
 
 load_dotenv()
@@ -84,6 +85,10 @@ def recieve_auth(): #handle the data returned from the oauth endpoint
 
     if not len(account_search_result['records']) == 1: # check if there is any auth accounts with the same oidc as the current user
         #new account creation
+        session_token = auth.generate_session_token()
+        session_hash = hashlib.sha256(session_token.encode()).hexdigest()
+
+
         airtable_new_auth_payload = { #data for new entry in auth table
             "records":[
                 {
@@ -92,7 +97,8 @@ def recieve_auth(): #handle the data returned from the oauth endpoint
                        "Name": hca_user_data_json['identity']['first_name'] + " " + hca_user_data_json['identity']['last_name'],
                        "Encrypted HCA Access Token": encrypted_token,
                        "Eligible": ysws_eligible,
-                       "Slack ID": hca_user_data_json['identity']['slack_id']
+                       "Slack ID": hca_user_data_json['identity']['slack_id'],
+                       "Session Tokens": session_hash
                    }
                 }
             ]
@@ -118,12 +124,46 @@ def recieve_auth(): #handle the data returned from the oauth endpoint
             ]
         }
 
-        search_url = "https://api.airtable.com/v0/"+os.environ.get("AIRTABLE_BASE_ID")+"/"+os.environ.get("AIRTABLE_USERS_TABLE_ID")
-        account_creation_response = requests.post(search_url,headers=airtable_req_headers,json=airtable_new_user_payload)
+        users_table_url = "https://api.airtable.com/v0/"+os.environ.get("AIRTABLE_BASE_ID")+"/"+os.environ.get("AIRTABLE_USERS_TABLE_ID")
+        account_creation_response = requests.post(users_table_url,headers=airtable_req_headers,json=airtable_new_user_payload)
 
         if account_creation_response.status_code != 200:
             print("airtable identity storing in users table failed with http code "+str(account_creation_response.status_code)+"\nit failed with response"+str(account_creation_response.json()))
-            return redirect(main_url+"/error?code=500&message=something+failed+trying+to+create+your+account+in+our+system%2E+please+contact+%40thirtyseven+on+slack+immediately")
+            return redirect(main_url+"/error?code=500&message=something+failed+trying+to+create+your+account+in+our+system%2E+please+contact+%40thirtyseven+on+slack+immediately") #
+        # TODO: ADD SESSION TOKEN TO COOKIES
+
+    elif len(account_search_result['records']) == 1:
+        account_data = account_search_result['records'][0]['fields']
+        record_id = account_search_result['records'][0]['id']
+
+        #make a new session token and hash it
+        session_token = auth.generate_session_token()
+        session_hash = hashlib.sha256(session_token.encode()).hexdigest()
+
+        #get the current list of session tokens
+        token_list_str = account_data['Session Tokens'] # TODO: This breaks if there are no listed tokens in airtable
+        token_list = token_list_str.split("/n")
+
+        token_list.append(session_hash) #add the new token to the list
+        token_list_str = "\n".join(token_list)
+
+        session_create_data = {
+            "fields":{
+                "Session Tokens": token_list_str
+            }
+        }
+
+        record_url = "https://api.airtable.com/v0/"+os.environ.get("AIRTABLE_BASE_ID")+"/"+os.environ.get("AIRTABLE_AUTH_TABLE_ID")+"/"+record_id
+        session_create_response = requests.patch(record_url,json=session_create_data,headers=airtable_req_headers)
+
+        if session_create_response.status_code != 200:
+            print("adding new session hash to airtable failed with http code "+str(session_create_response.status_code)+"\nit failed with response"+str(session_create_response.json()))
+            return redirect(main_url+"/error?code=500&message=something+has+failed+trying+to+sign+you+in%2E+something+may+be+broken+server+side+so+it%27s+advised+to+contact+%40thirtyseven+on+slack+asap")
+
+
+        # TODO: ADD SESSION TOKEN TO COOKIES
+
+
 
     return redirect(main_url+"/auth/callback")
 

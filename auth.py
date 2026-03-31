@@ -21,3 +21,7 @@ def decrypt_token(encrypted_token, id, key):
 
     access_token = aesgcm.decrypt(nonce,ciphertext,id.encode()).decode() #decrypt the thing
     return access_token
+def generate_session_token():
+    import secrets
+    return secrets.token_urlsafe(32)
+
