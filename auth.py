@@ -1,7 +1,10 @@
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+import hashlib
+import os
+import base64
+import secrets
+
 def encrypt_token(token, id, key):#i had to get claude (booo) to help with some of this, as i have no idea how encryption works. i have done my research outside of that, making sure what it told me to do makes sense
-    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-    import os
-    import base64
 
     aesgcm = AESGCM(key) #load the key
 
@@ -11,9 +14,6 @@ def encrypt_token(token, id, key):#i had to get claude (booo) to help with some 
     return base64.urlsafe_b64encode(nonce + ciphertext).decode() #encode the nonce with it
 
 def decrypt_token(encrypted_token, id, key):
-    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-    import base64
-
     data = base64.urlsafe_b64decode(encrypted_token.encode()) #read the encrypted token properly
     aesgcm = AESGCM(key) #load the key
 
@@ -22,6 +22,6 @@ def decrypt_token(encrypted_token, id, key):
     access_token = aesgcm.decrypt(nonce,ciphertext,id.encode()).decode() #decrypt the thing
     return access_token
 def generate_session_token():
-    import secrets
-    return secrets.token_urlsafe(32)
+    token = secrets.token_urlsafe(32)
+    return token, hashlib.sha256(token.encode()).hexdigest()
 

@@ -3,9 +3,7 @@ import requests
 import base64
 import auth
 import hashlib
-from flask import Flask
-from flask import redirect
-from flask import request
+from flask import Flask, request, redirect, make_response
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from dotenv import load_dotenv
@@ -42,6 +40,8 @@ def recieve_auth(): #handle the data returned from the oauth endpoint
     if code is None:
         print("the code passed to the oauth callback param was none, someone broke something")
         return redirect(main_url+ "/error?code=400&message=either%20something%20has%20gone%20horribly%20wrong%2C%20or%20you%20found%20this%20endpoint%20and%20never%20tried%20to%20do%20anything%20important%20in%20the%20first%20place%2E%20if%20you%20didn't%20expect%20an%20error%2C%20please%20contact%20%40thirtyseven%20on%20slack")
+
+    final_client_response = make_response(redirect(main_url+"/auth/callback")) #setup the request now so i can add data later
 
     #aquire the access token from hca
     token_request_payload = {
@@ -85,9 +85,7 @@ def recieve_auth(): #handle the data returned from the oauth endpoint
 
     if not len(account_search_result['records']) == 1: # check if there is any auth accounts with the same oidc as the current user
         #new account creation
-        session_token = auth.generate_session_token()
-        session_hash = hashlib.sha256(session_token.encode()).hexdigest()
-
+        session_token, session_hash = auth.generate_session_token()
 
         airtable_new_auth_payload = { #data for new entry in auth table
             "records":[
@@ -130,15 +128,22 @@ def recieve_auth(): #handle the data returned from the oauth endpoint
         if account_creation_response.status_code != 200:
             print("airtable identity storing in users table failed with http code "+str(account_creation_response.status_code)+"\nit failed with response"+str(account_creation_response.json()))
             return redirect(main_url+"/error?code=500&message=something+failed+trying+to+create+your+account+in+our+system%2E+please+contact+%40thirtyseven+on+slack+immediately") #
-        # TODO: ADD SESSION TOKEN TO COOKIES
 
-    elif len(account_search_result['records']) == 1:
+        final_client_response.set_cookie( #add the cookie to the response to the client
+            "sparkle_token",
+            session_token,
+            domain=".sparkle.dino.icu",
+            httponly=True,
+            samesite="lax",
+            secure=False #TODO: holy shit change this to true when you commit ffs
+        )
+
+    elif len(account_search_result['records']) == 1: #account already exists, but user is going through oauth so they need a new session token
         account_data = account_search_result['records'][0]['fields']
         record_id = account_search_result['records'][0]['id']
 
         #make a new session token and hash it
-        session_token = auth.generate_session_token()
-        session_hash = hashlib.sha256(session_token.encode()).hexdigest()
+        session_token, session_hash = auth.generate_session_token()
 
         #get the current list of session tokens
         token_list_str = account_data['Session Tokens'] # TODO: This breaks if there are no listed tokens in airtable
@@ -147,6 +152,7 @@ def recieve_auth(): #handle the data returned from the oauth endpoint
         token_list.append(session_hash) #add the new token to the list
         token_list_str = "\n".join(token_list)
 
+        #ad the token list to airtable
         session_create_data = {
             "fields":{
                 "Session Tokens": token_list_str
@@ -158,28 +164,39 @@ def recieve_auth(): #handle the data returned from the oauth endpoint
 
         if session_create_response.status_code != 200:
             print("adding new session hash to airtable failed with http code "+str(session_create_response.status_code)+"\nit failed with response"+str(session_create_response.json()))
-            return redirect(main_url+"/error?code=500&message=something+has+failed+trying+to+sign+you+in%2E+something+may+be+broken+server+side+so+it%27s+advised+to+contact+%40thirtyseven+on+slack+asap")
+            return redirect(main_url+"/error?code=500&message=something+has+failed+trying+to+sign+you+in%2E+something+may+be+broken+server+side+so+please+contact+%40thirtyseven+on+slack+asap")
 
+        final_client_response.set_cookie( #add the cookie to the response to the client
+            "sparkle_token",
+            session_token,
+            domain=".sparkle.dino.icu",
+            httponly=True,
+            samesite="lax",
+            secure=True
+        )
 
-        # TODO: ADD SESSION TOKEN TO COOKIES
-
-
-
-    return redirect(main_url+"/auth/callback")
+    return final_client_response
 
 @app.route("/tempapi/rsvp-submissions")
+@app.route("/misc/rsvp-count")
 @limiter.limit("60 per minute")
 def send_submissions():
+    custom_response_headers = {"Access-Control-Allow-Origin": "*"}
     submission_request_cap = 150
-    
+
     #get number of rsvps from fillout
     headers = {"Authorization": "Bearer " + str(os.environ.get("FILLOUT_API_KEY"))}
     url = "https://api.fillout.com/v1/api/forms/" + str(os.environ.get("FILLOUT_FORM_ID")) + "/submissions?limit=" + str(submission_request_cap)
 
     response = requests.get(url,headers=headers)
 
+    if response.status_code != 200: #make sure it worked
+        print("call to fillout api did not return successfully\n|    request returned http code " + str(response.status_code) + "\n\    with error: " + str(response.json()['message']))
+        return {"total_submissions": -1}, 500, custom_response_headers
+
     #iteration bs to repeat the submissions request until we get all of them
     offset = 0
+
     submissions = response.json()['totalResponses']
     while submissions % submission_request_cap == 0:
         offset += submission_request_cap
@@ -192,10 +209,8 @@ def send_submissions():
 
 
     #send it to the client
-    custom_response_headers = {"Access-Control-Allow-Origin": "*"}
+    return {"total_submissions":submissions},200,custom_response_headers
 
-    if response.status_code == 200:
-        return {"total_submissions":submissions},200,custom_response_headers
-    else:
-        print("call to fillout api did not return successfully\n|    request returned http code "+str(response.status_code)+"\n\    with error: "+str(response.json()['message']))
-        return {"total_submissions":-1},500,custom_response_headers
+@app.route("/misc/status")
+def basic_status():
+    return {"ok":"true"},200
