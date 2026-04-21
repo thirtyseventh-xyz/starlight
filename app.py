@@ -7,6 +7,10 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from dotenv import load_dotenv
 from slack_sdk import WebClient
+from pyairtable import Api, formulas
+
+#This code is spaghetti and needs to be fixed lol TODO: split stuff into separate files using blueprints and make it more organized
+# oh also TODO: get url safe checks on all the places users can input stuff (rn just the oauth callback)
 
 load_dotenv()
 
@@ -19,6 +23,9 @@ encryption_key = base64.urlsafe_b64decode(os.environ.get("ENCRYPTION_KEY"))
 
 main_url = os.environ.get("PROD_MAIN_URL")
 
+airtable_api = Api(os.environ.get("AIRTABLE_API_KEY"))
+auth_table = airtable_api.table(os.environ.get("AIRTABLE_BASE_ID"),os.environ.get("AIRTABLE_AUTH_TABLE_ID"))
+users_table = airtable_api.table(os.environ.get("AIRTABLE_BASE_ID"),os.environ.get("AIRTABLE_USERS_TABLE_ID"))
 
 @app.route("/")
 def get_out():
@@ -73,106 +80,81 @@ def recieve_auth(): #handle the data returned from the oauth endpoint
 
     encrypted_token = auth.encrypt_token(access_token, hca_id, encryption_key) #encrypt stuff so we dont get jumped by meta
 
-    #init airtable data and stuff
-    auth_table_url = "https://api.airtable.com/v0/"+os.environ.get("AIRTABLE_BASE_ID")+"/"+os.environ.get("AIRTABLE_AUTH_TABLE_ID") #table where entries for auth system are
-    airtable_req_headers = {"Authorization": "Bearer "+os.environ.get("AIRTABLE_API_KEY")}
-
     #check if an entry for the oidc id already exists in airtable
-    search_url = auth_table_url+"?filterByFormula=%7BOIDC%20ID%7D%3D'"+hca_id+"'"
-    account_search_result = requests.get(search_url,headers=airtable_req_headers) #get entries with an oidc matching the current one
-    account_search_result = account_search_result.json()
+    account_search_formula = formulas.match({"OIDC ID":hca_id})
+    account_search_result = auth_table.all(formula=account_search_formula)
 
-    if not len(account_search_result['records']) == 1: # check if there is any auth accounts with the same oidc as the current user
+    if len(account_search_result) == 0: # check if there is any auth accounts with the same oidc as the current user
         #new account creation
-        session_token, session_hash = auth.generate_session_token()
+        try:
+            session_token, session_hash = auth.generate_session_token()
 
-        airtable_new_auth_payload = { #data for new entry in auth table
-            "records":[
-                {
-                   "fields": {
-                       "OIDC ID": hca_id,
-                       "Name": hca_user_data_json['identity']['first_name'] + " " + hca_user_data_json['identity']['last_name'],
-                       "Encrypted HCA Access Token": encrypted_token,
-                       "Eligible": ysws_eligible,
-                       "Slack ID": hca_user_data_json['identity']['slack_id'],
-                       "Session Tokens": session_hash
-                   }
-                }
-            ]
-        }
-
-        airtable_response = requests.post(auth_table_url,headers=airtable_req_headers,json=airtable_new_auth_payload) #create user in auth table
-
-        if airtable_response.status_code != 200:
-            print("airtable identity storing in auth table failed with http code "+str(airtable_response.status_code)+"\nit failed with response"+str(airtable_response.json()))
-            return redirect(main_url+"/error?code=500&message=something+failed+trying+to+create+your+account+in+our+system%2E+please+contact+%40thirtyseven+on+slack+immediately")
-
-        slack_user_data = slack_client.users_profile_get(user=hca_user_data_json['identity']['slack_id'])
-        slack_display_name = slack_user_data['profile']['display_name_normalized']
-
-        airtable_new_user_payload = {
-            "records":[
-                {
-                    "fields": {
-                        "Username": slack_display_name,
-                        "Auth Entry": [airtable_response.json()['records'][0]['id']]
-                    }
-                }
-            ]
-        }
-
-        users_table_url = "https://api.airtable.com/v0/"+os.environ.get("AIRTABLE_BASE_ID")+"/"+os.environ.get("AIRTABLE_USERS_TABLE_ID")
-        account_creation_response = requests.post(users_table_url,headers=airtable_req_headers,json=airtable_new_user_payload)
-
-        if account_creation_response.status_code != 200:
-            print("airtable identity storing in users table failed with http code "+str(account_creation_response.status_code)+"\nit failed with response"+str(account_creation_response.json()))
-            return redirect(main_url+"/error?code=500&message=something+failed+trying+to+create+your+account+in+our+system%2E+please+contact+%40thirtyseven+on+slack+immediately") #
-
-        final_client_response.set_cookie( #add the cookie to the response to the client
-            "sparkle_token",
-            session_token,
-            domain=".sparkle.dino.icu",
-            httponly=True,
-            samesite="lax",
-            secure=False #TODO: holy shit change this to true when you commit ffs
-        )
-
-    elif len(account_search_result['records']) == 1: #account already exists, but user is going through oauth so they need a new session token
-        account_data = account_search_result['records'][0]['fields']
-        record_id = account_search_result['records'][0]['id']
-
-        #make a new session token and hash it
-        session_token, session_hash = auth.generate_session_token()
-
-        #get the current list of session tokens
-        token_list_str = account_data['Session Tokens'] # TODO: This breaks if there are no listed tokens in airtable
-        token_list = token_list_str.split("/n")
-
-        token_list.append(session_hash) #add the new token to the list
-        token_list_str = "\n".join(token_list)
-
-        #ad the token list to airtable
-        session_create_data = {
-            "fields":{
-                "Session Tokens": token_list_str
+            airtable_new_auth_entry = {
+               "OIDC ID": hca_id,
+               "Name": hca_user_data_json['identity']['first_name'] + " " + hca_user_data_json['identity']['last_name'],
+               "Encrypted HCA Access Token": encrypted_token,
+               "Eligible": ysws_eligible,
+               "Slack ID": hca_user_data_json['identity']['slack_id'],
+               "Session Tokens": session_hash
             }
-        }
 
-        record_url = "https://api.airtable.com/v0/"+os.environ.get("AIRTABLE_BASE_ID")+"/"+os.environ.get("AIRTABLE_AUTH_TABLE_ID")+"/"+record_id
-        session_create_response = requests.patch(record_url,json=session_create_data,headers=airtable_req_headers)
+            auth_response = auth_table.create(airtable_new_auth_entry) # create the user in the auth table
 
-        if session_create_response.status_code != 200:
-            print("adding new session hash to airtable failed with http code "+str(session_create_response.status_code)+"\nit failed with response"+str(session_create_response.json()))
-            return redirect(main_url+"/error?code=500&message=something+has+failed+trying+to+sign+you+in%2E+something+may+be+broken+server+side+so+please+contact+%40thirtyseven+on+slack+asap")
+            slack_user_data = slack_client.users_profile_get(user=hca_user_data_json['identity']['slack_id'])
+            slack_display_name = slack_user_data['profile']['display_name_normalized']
 
-        final_client_response.set_cookie( #add the cookie to the response to the client
-            "sparkle_token",
-            session_token,
-            domain=".sparkle.dino.icu",
-            httponly=True,
-            samesite="lax",
-            secure=True
-        )
+            airtable_new_user_entry = {
+                "Username": slack_display_name,
+                "Auth Entry": [auth_response['id']]
+            }
+
+            users_table.create(airtable_new_user_entry) # create the user in the users db
+
+            final_client_response.set_cookie( #add the cookie to the response to the client
+                "sparkle_token",
+                session_token,
+                domain=".sparkle.dino.icu",
+                httponly=True,
+                samesite="lax",
+                secure=True #TODO: holy shit change this to true when you commit ffs
+            )
+        except Exception as e:
+            print("airtable identity creation failed! \n"+str(e))
+            return redirect(main_url + "/error?code=500&message=something+failed+trying+to+create+your+account+in+our+system%2E+please+contact+%40thirtyseven+on+slack+immediately")  #
+
+    elif len(account_search_result) == 1: #account already exists, but user is going through oauth so they need a new session token
+        #try:
+            account_data = account_search_result[0]['fields']
+            record_id = account_search_result[0]['id']
+
+
+            #make a new session token and hash it
+            session_token, session_hash = auth.generate_session_token()
+
+            #get the current list of session tokens
+            token_list_str = account_data['Session Tokens'] # TODO: This breaks if there are no listed tokens in airtable
+            token_list = token_list_str.split("/n")
+
+            token_list.append(session_hash) #add the new token to the list
+            token_list_str = "\n".join(token_list)
+
+            #ad the token list to airtable
+            session_create_data = {"Session Tokens": token_list_str}
+            auth_table.update(record_id, session_create_data)
+
+            final_client_response.set_cookie( #add the cookie to the response to the client
+                "sparkle_token",
+                session_token,
+                domain=".sparkle.dino.icu",
+                httponly=True,
+                samesite="lax",
+                secure=True
+            )
+        #except Exception as e:
+        #    print("airtable session creation failed! \n"+str(e))
+        #    return main_url+"/error?code=500&message=something%20went%20wrong%20signing%20you%20in.%20please%20contact%20%40thirtyseven%20on%20slack"
+    else:
+        return main_url+"/error?code=500&message=something%20went%20wrong%20setting%20up%20your%20account.%20please%20contact%20%40thirtyseven%20on%20slack%20immediately!"
 
     return final_client_response
 
@@ -211,5 +193,5 @@ def send_submissions():
     return {"total_submissions":submissions},200,custom_response_headers
 
 @app.route("/misc/status")
-def basic_status():
+def basic_status(): # this is entirely the wrong way to do this but it works and i dont care
     return {"ok":"true"},200
