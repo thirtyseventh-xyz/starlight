@@ -39,7 +39,7 @@ def fancy_404(e):
 def recieve_auth(): #handle the data returned from the oauth endpoint
     #basic checks and stuff
     if os.environ.get("DISABLE_OAUTH").lower() == "true":
-        return redirect(main_url+"/error?code=423&message=signin+is+currently+disabled")
+        return redirect(main_url+"/error?code=423&message=sign+in+is+currently+disabled")
 
     code = request.args.get("code")
 
@@ -116,17 +116,16 @@ def recieve_auth(): #handle the data returned from the oauth endpoint
                 domain=".sparkle.dino.icu",
                 httponly=True,
                 samesite="lax",
-                secure=True #TODO: holy shit change this to true when you commit ffs
+                secure=True
             )
         except Exception as e:
             print("airtable identity creation failed! \n"+str(e))
             return redirect(main_url + "/error?code=500&message=something+failed+trying+to+create+your+account+in+our+system%2E+please+contact+%40thirtyseven+on+slack+immediately")  #
 
     elif len(account_search_result) == 1: #account already exists, but user is going through oauth so they need a new session token
-        #try:
+        try:
             account_data = account_search_result[0]['fields']
             record_id = account_search_result[0]['id']
-
 
             #make a new session token and hash it
             session_token, session_hash = auth.generate_session_token()
@@ -150,9 +149,9 @@ def recieve_auth(): #handle the data returned from the oauth endpoint
                 samesite="lax",
                 secure=True
             )
-        #except Exception as e:
-        #    print("airtable session creation failed! \n"+str(e))
-        #    return main_url+"/error?code=500&message=something%20went%20wrong%20signing%20you%20in.%20please%20contact%20%40thirtyseven%20on%20slack"
+        except Exception as e:
+            print("airtable session creation failed! \n"+str(e))
+            return main_url+"/error?code=500&message=something%20went%20wrong%20signing%20you%20in.%20please%20contact%20%40thirtyseven%20on%20slack"
     else:
         return main_url+"/error?code=500&message=something%20went%20wrong%20setting%20up%20your%20account.%20please%20contact%20%40thirtyseven%20on%20slack%20immediately!"
 
