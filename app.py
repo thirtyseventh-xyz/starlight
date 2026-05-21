@@ -36,7 +36,7 @@ def fancy_404(e):
     return redirect(main_url+"/error?code=404&message=page+not+found%2E+maybe+you+are+looking+for+this+page+on+the+main+sparkle+domain+and+not+the+api%3F")
 
 @app.route("/oauth/callback")
-def recieve_auth(): #handle the data returned from the oauth endpoint
+def receive_auth(): #handle the data returned from the oauth endpoint
     #basic checks and stuff
     if os.environ.get("DISABLE_OAUTH").lower() == "true":
         return redirect(main_url+"/error?code=423&message=sign+in+is+currently+disabled")
