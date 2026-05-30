@@ -24,6 +24,7 @@ pydantic==2.13.2
 pydantic_core==2.46.2
 python-dotenv==1.2.2
 requests==2.33.1
+sentry-sdk==2.61.0
 slack-client==0.3.0
 slack_bolt==1.28.0
 slack_sdk==3.41.0

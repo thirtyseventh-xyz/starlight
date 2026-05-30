@@ -1,6 +1,7 @@
 import os
 import requests
 import base64
+import sentry_sdk
 import auth
 from flask import Flask, request, redirect, make_response
 from flask_limiter import Limiter
@@ -8,6 +9,7 @@ from flask_limiter.util import get_remote_address
 from dotenv import load_dotenv
 from slack_sdk import WebClient
 from pyairtable import Api, formulas
+from sentry_sdk.integrations.flask import FlaskIntegration
 
 #This code is spaghetti and needs to be fixed lol TODO: split stuff into separate files using blueprints and make it more organized
 # oh also TODO: get url safe checks on all the places users can input stuff (rn just the oauth callback)
@@ -16,6 +18,7 @@ load_dotenv()
 
 slack_client = WebClient(token=os.environ.get("SLACK_BOT_TOKEN"))
 
+sentry_sdk.init(os.environ.get("SENTRY_DSN"), integrations=[FlaskIntegration()])
 app = Flask(__name__)
 limiter = Limiter(get_remote_address,app=app, default_limits=["20000 per day", "5000 per hour"] )
 
