@@ -1,13 +1,10 @@
 from flask import Blueprint,redirect,request,make_response
 from pyairtable import Api, formulas
 from slack_sdk import WebClient
-from dotenv import load_dotenv
 import requests
 import base64
 import auth
 import os
-
-load_dotenv()
 
 slack_client = WebClient(token=os.environ.get("SLACK_BOT_TOKEN"))
 
