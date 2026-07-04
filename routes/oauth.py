@@ -1,7 +1,6 @@
 from flask import Blueprint,redirect,request, session
 from pyairtable import Api, formulas
 from slack_sdk import WebClient
-import secrets
 import requests
 import base64
 import auth
@@ -25,7 +24,8 @@ def send_auth():
     if os.environ.get("DISABLE_OAUTH").lower() == "true":
         return redirect(main_url+"/error?code=423&message=sign+in+is+currently+disabled")
 
-
+    redirect_url = "https://auth.hackclub.com/oauth/authorize?client_id="+str(os.environ.get("HCA_OAUTH_CLIENT_ID"))+"&redirect_uri="+str(os.environ.get("HCA_OAUTH_REDIRECT_URI").replace(":","%3A").replace("/","%2F"))+"&response_type=code&scope=openid+name+verification_status"
+    return redirect(redirect_url)
 
 @oauth_routes.route("/callback")
 def receive_auth(): #handle the data returned from the oauth endpoint
@@ -43,7 +43,7 @@ def receive_auth(): #handle the data returned from the oauth endpoint
     token_request_payload = {
         "client_id": str(os.environ.get("HCA_OAUTH_CLIENT_ID")),
         "client_secret": str(os.environ.get("HCA_OAUTH_CLIENT_SECRET")),
-        "redirect_uri": str(os.environ.get("REDIRECT_URI")),
+        "redirect_uri": str(os.environ.get("HCA_OAUTH_REDIRECT_URI")),
         "code": str(code),
         "grant_type": "authorization_code"
     }
