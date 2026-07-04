@@ -1,4 +1,4 @@
-from flask import Blueprint,redirect,request,make_response, session
+from flask import Blueprint,redirect,request, session
 from pyairtable import Api, formulas
 from slack_sdk import WebClient
 import requests
@@ -31,7 +31,6 @@ def receive_auth(): #handle the data returned from the oauth endpoint
         print("the code passed to the oauth callback param was none, someone broke something")
         return redirect(main_url+ "/error?code=400&message=either%20something%20has%20gone%20horribly%20wrong%2C%20or%20you%20found%20this%20endpoint%20and%20never%20tried%20to%20do%20anything%20important%20in%20the%20first%20place%2E%20if%20you%20didn't%20expect%20an%20error%2C%20please%20contact%20%40thirtyseven%20on%20slack")
 
-    final_client_response = make_response(redirect(main_url+"/auth/callback"))
 
     token_request_payload = {
         "client_id": str(os.environ.get("HCA_OAUTH_CLIENT_ID")),
@@ -109,4 +108,4 @@ def receive_auth(): #handle the data returned from the oauth endpoint
     else:
         return main_url+"/error?code=500&message=something%20went%20wrong%20setting%20up%20your%20account.%20please%20contact%20%40thirtyseven%20on%20slack%20immediately!"
 
-    return final_client_response
+    return redirect(main_url+"/auth/callback")
