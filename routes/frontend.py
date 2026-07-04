@@ -12,4 +12,6 @@ def index():
 
 @frontend_routes.route("/<path:path>")
 def static_proxy(path):
-    return send_from_directory(frontend_dist, path)
+    if path != "" and os.path.exists(os.path.join(frontend_dist, path)): #if its an asset file, grab it from assets
+        return send_from_directory(frontend_dist, path)
+    return render_template("index.html")
