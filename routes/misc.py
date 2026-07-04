@@ -18,7 +18,7 @@ def send_submissions():
 
     response = requests.get(url,headers=headers)
 
-    if response.status_code != 200: #make sure it worked
+    if response.status_code != 200:
         sentry_sdk.capture_message(
             "request to fillout to get stats failed",
             level="warning",
@@ -40,8 +40,6 @@ def send_submissions():
             break
         submissions += response.json()['totalResponses']
 
-
-    #send it to the client
     return {"total_submissions":submissions},200,custom_response_headers
 
 @misc_routes.route("/status")

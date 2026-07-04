@@ -21,7 +21,7 @@ oauth_routes = Blueprint("oauth",__name__,url_prefix="/oauth")
 
 @oauth_routes.route("/callback")
 def receive_auth(): #handle the data returned from the oauth endpoint
-    #basic checks and stuff
+
     if os.environ.get("DISABLE_OAUTH").lower() == "true":
         return redirect(main_url+"/error?code=423&message=sign+in+is+currently+disabled")
 
@@ -31,9 +31,8 @@ def receive_auth(): #handle the data returned from the oauth endpoint
         print("the code passed to the oauth callback param was none, someone broke something")
         return redirect(main_url+ "/error?code=400&message=either%20something%20has%20gone%20horribly%20wrong%2C%20or%20you%20found%20this%20endpoint%20and%20never%20tried%20to%20do%20anything%20important%20in%20the%20first%20place%2E%20if%20you%20didn't%20expect%20an%20error%2C%20please%20contact%20%40thirtyseven%20on%20slack")
 
-    final_client_response = make_response(redirect(main_url+"/auth/callback")) #setup the request now so i can add data later
+    final_client_response = make_response(redirect(main_url+"/auth/callback"))
 
-    #aquire the access token from hca
     token_request_payload = {
         "client_id": str(os.environ.get("HCA_OAUTH_CLIENT_ID")),
         "client_secret": str(os.environ.get("HCA_OAUTH_CLIENT_SECRET")),
@@ -77,8 +76,7 @@ def receive_auth(): #handle the data returned from the oauth endpoint
     account_search_formula = formulas.match({"OIDC ID":hca_id})
     account_search_result = auth_table.all(formula=account_search_formula)
 
-    if len(account_search_result) == 0: # check if there is any auth accounts with the same oidc as the current user
-        #new account creation
+    if len(account_search_result) == 0:#new account creation
         try:
             airtable_new_auth_entry = {
                "OIDC ID": hca_id,
@@ -88,7 +86,7 @@ def receive_auth(): #handle the data returned from the oauth endpoint
                "Slack ID": hca_user_data_json['identity']['slack_id']
             }
 
-            auth_response = auth_table.create(airtable_new_auth_entry) # create the user in the auth table
+            auth_response = auth_table.create(airtable_new_auth_entry)
 
             slack_user_data = slack_client.users_profile_get(user=hca_user_data_json['identity']['slack_id'])
             slack_display_name = slack_user_data['profile']['display_name_normalized']
@@ -98,7 +96,7 @@ def receive_auth(): #handle the data returned from the oauth endpoint
                 "Auth Entry": [auth_response['id']]
             }
 
-            users_table.create(airtable_new_user_entry) # create the user in the users db
+            users_table.create(airtable_new_user_entry)
 
             session['user_id'] = hca_id
 
@@ -106,7 +104,7 @@ def receive_auth(): #handle the data returned from the oauth endpoint
             sentry_sdk.capture_exception(e)
             return redirect(main_url + "/error?code=500&message=something+failed+trying+to+create+your+account+in+our+system%2E+please+contact+%40thirtyseven+on+slack+immediately")  #
 
-    elif len(account_search_result) == 1: #account already exists, but user is going through oauth so they need a new session token
+    elif len(account_search_result) == 1: #account already exists
         session['user_id'] = hca_id
     else:
         return main_url+"/error?code=500&message=something%20went%20wrong%20setting%20up%20your%20account.%20please%20contact%20%40thirtyseven%20on%20slack%20immediately!"
