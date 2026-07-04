@@ -25,16 +25,15 @@ app.config['SESSION_COOKIE_SAMESITE'] = "Lax"
 
 Session(app)
 
-@app.route("/")
-def get_out():
-    return redirect(main_url)
 
 @app.errorhandler(404)
 def fancy_404(e):
     return redirect(main_url+"/error?code=404&message=page+not+found%2E+maybe+you+are+looking+for+this+page+on+the+main+sparkle+domain+and+not+the+api%3F")
 
+from routes.frontend import frontend_routes
 from routes.oauth import oauth_routes
 from routes.misc import misc_routes
 
+app.register_blueprint(frontend_routes)
 app.register_blueprint(oauth_routes)
 app.register_blueprint(misc_routes)
