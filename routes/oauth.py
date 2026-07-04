@@ -18,7 +18,7 @@ users_table = airtable_api.table(os.environ.get("AIRTABLE_BASE_ID"),os.environ.g
 
 oauth_routes = Blueprint("oauth",__name__,url_prefix="/oauth")
 
-@oauth_routes.route("/oauth/callback")
+@oauth_routes.route("/callback")
 def receive_auth(): #handle the data returned from the oauth endpoint
     #basic checks and stuff
     if os.environ.get("DISABLE_OAUTH").lower() == "true":
