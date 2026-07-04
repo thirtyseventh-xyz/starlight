@@ -3,8 +3,8 @@ import sentry_sdk
 from flask import Flask, request, redirect, make_response
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_session import Session
 from dotenv import load_dotenv
-from slack_sdk import WebClient
 from sentry_sdk.integrations.flask import FlaskIntegration
 
 #This code is spaghetti and needs to be fixed lol TODO: split stuff into separate files using blueprints and make it more organized
@@ -12,13 +12,21 @@ from sentry_sdk.integrations.flask import FlaskIntegration
 
 load_dotenv()
 
-slack_client = WebClient(token=os.environ.get("SLACK_BOT_TOKEN"))
+main_url = str(os.environ.get("PROD_MAIN_URL"))
 
 sentry_sdk.init(os.environ.get("SENTRY_DSN"), integrations=[FlaskIntegration()])
 app = Flask(__name__)
 limiter = Limiter(get_remote_address,app=app, default_limits=["20000 per day", "5000 per hour"] )
 
-main_url = os.environ.get("PROD_MAIN_URL")
+app.secret_key = os.environ.get("FLASK_SECRET_KEY")
+
+app.config["SESSION_TYPE"] = "filesystem"
+app.config['SESSION_COOKIE_DOMAIN'] = "."+main_url
+app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = "Lax"
+
+Session(app)
 
 @app.route("/")
 def get_out():

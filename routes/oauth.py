@@ -1,4 +1,4 @@
-from flask import Blueprint,redirect,request,make_response
+from flask import Blueprint,redirect,request,make_response, session
 from pyairtable import Api, formulas
 from slack_sdk import WebClient
 import requests
@@ -70,15 +70,12 @@ def receive_auth(): #handle the data returned from the oauth endpoint
     if len(account_search_result) == 0: # check if there is any auth accounts with the same oidc as the current user
         #new account creation
         try:
-            session_token, session_hash = auth.generate_session_token()
-
             airtable_new_auth_entry = {
                "OIDC ID": hca_id,
                "Name": hca_user_data_json['identity']['first_name'] + " " + hca_user_data_json['identity']['last_name'],
                "Encrypted HCA Access Token": encrypted_token,
                "Eligible": ysws_eligible,
-               "Slack ID": hca_user_data_json['identity']['slack_id'],
-               "Session Tokens": session_hash
+               "Slack ID": hca_user_data_json['identity']['slack_id']
             }
 
             auth_response = auth_table.create(airtable_new_auth_entry) # create the user in the auth table
@@ -93,48 +90,14 @@ def receive_auth(): #handle the data returned from the oauth endpoint
 
             users_table.create(airtable_new_user_entry) # create the user in the users db
 
-            final_client_response.set_cookie( #add the cookie to the response to the client
-                "sparkle_token",
-                session_token,
-                domain=".sparkle.dino.icu",
-                httponly=True,
-                samesite="lax",
-                secure=True
-            )
+            session['user_id'] = hca_id
+
         except Exception as e:
             print("airtable identity creation failed! \n"+str(e))
             return redirect(main_url + "/error?code=500&message=something+failed+trying+to+create+your+account+in+our+system%2E+please+contact+%40thirtyseven+on+slack+immediately")  #
 
     elif len(account_search_result) == 1: #account already exists, but user is going through oauth so they need a new session token
-        try:
-            account_data = account_search_result[0]['fields']
-            record_id = account_search_result[0]['id']
-
-            #make a new session token and hash it
-            session_token, session_hash = auth.generate_session_token()
-
-            #get the current list of session tokens
-            token_list_str = account_data['Session Tokens'] # TODO: This breaks if there are no listed tokens in airtable
-            token_list = token_list_str.split("/n")
-
-            token_list.append(session_hash) #add the new token to the list
-            token_list_str = "\n".join(token_list)
-
-            #ad the token list to airtable
-            session_create_data = {"Session Tokens": token_list_str}
-            auth_table.update(record_id, session_create_data)
-
-            final_client_response.set_cookie( #add the cookie to the response to the client
-                "sparkle_token",
-                session_token,
-                domain=".sparkle.dino.icu",
-                httponly=True,
-                samesite="lax",
-                secure=True
-            )
-        except Exception as e:
-            print("airtable session creation failed! \n"+str(e))
-            return main_url+"/error?code=500&message=something%20went%20wrong%20signing%20you%20in.%20please%20contact%20%40thirtyseven%20on%20slack"
+        session['user_id'] = hca_id
     else:
         return main_url+"/error?code=500&message=something%20went%20wrong%20setting%20up%20your%20account.%20please%20contact%20%40thirtyseven%20on%20slack%20immediately!"
 
