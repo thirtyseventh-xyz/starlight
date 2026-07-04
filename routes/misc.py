@@ -2,6 +2,7 @@ from flask import Blueprint
 from app import limiter
 import os
 import requests
+import sentry_sdk
 
 misc_routes = Blueprint("misc",__name__,url_prefix="/misc")
 
@@ -18,7 +19,12 @@ def send_submissions():
     response = requests.get(url,headers=headers)
 
     if response.status_code != 200: #make sure it worked
-        print("call to fillout api did not return successfully\n|    request returned http code " + str(response.status_code) + "\n\    with error: " + str(response.json()['message']))
+        sentry_sdk.capture_message(
+            "request to fillout to get stats failed",
+            level="warning",
+            tags={"token_request_status_code":response.status_code},
+            extras={"request_json":response.json()}
+        )
         return {"total_submissions": -1}, 500, custom_response_headers
 
     #iteration bs to repeat the submissions request until we get all of them

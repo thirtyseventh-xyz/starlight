@@ -5,6 +5,7 @@ import requests
 import base64
 import auth
 import os
+import sentry_sdk
 
 slack_client = WebClient(token=os.environ.get("SLACK_BOT_TOKEN"))
 
@@ -43,7 +44,16 @@ def receive_auth(): #handle the data returned from the oauth endpoint
     token_request_result = requests.post("https://auth.hackclub.com/oauth/token",data=token_request_payload)
 
     if token_request_result.status_code != 200:
-        print("request to hca to get access token failed with code "+str(token_request_result.status_code)+"\nit failed with data "+str(token_request_result.json()))
+        if token_request_result.status_code == 400 and token_request_result.json()['error'] == "invalid_grant":
+            print("print invalid hca grant")
+            return redirect(main_url+"/error?code=401&message=invalid+oauth+grant!+if+you+believe+this+is+a+mistake%2C+contact+%40thirtyseven+on+slack")
+
+        sentry_sdk.capture_message(
+            "request to hca for access token failed",
+            level="warning",
+            tags={"token_request_status_code":token_request_result.status_code},
+            extras={"request_json":token_request_result.json()}
+        )
         return redirect(main_url+"/error?code=500&message=something+has+gone+very+wrong+server+side+%28probably%29%2C+please+let+%40thirtyseven+know+on+slack+that+this+happened")
 
     token_request_response = token_request_result.json()
@@ -93,7 +103,7 @@ def receive_auth(): #handle the data returned from the oauth endpoint
             session['user_id'] = hca_id
 
         except Exception as e:
-            print("airtable identity creation failed! \n"+str(e))
+            sentry_sdk.capture_exception(e)
             return redirect(main_url + "/error?code=500&message=something+failed+trying+to+create+your+account+in+our+system%2E+please+contact+%40thirtyseven+on+slack+immediately")  #
 
     elif len(account_search_result) == 1: #account already exists, but user is going through oauth so they need a new session token
