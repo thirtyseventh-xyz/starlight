@@ -7,9 +7,6 @@ from flask_session import Session
 from dotenv import load_dotenv
 from sentry_sdk.integrations.flask import FlaskIntegration
 
-#This code is spaghetti and needs to be fixed lol TODO: split stuff into separate files using blueprints and make it more organized
-# oh also TODO: get url safe checks on all the places users can input stuff (rn just the oauth callback)
-
 load_dotenv()
 
 main_url = str(os.environ.get("PROD_MAIN_URL"))
