@@ -1,6 +1,7 @@
 from flask import Blueprint,redirect,request, session
 from pyairtable import Api, formulas
 from slack_sdk import WebClient
+import secrets
 import requests
 import base64
 import auth
@@ -18,6 +19,13 @@ auth_table = airtable_api.table(os.environ.get("AIRTABLE_BASE_ID"),os.environ.ge
 users_table = airtable_api.table(os.environ.get("AIRTABLE_BASE_ID"),os.environ.get("AIRTABLE_USERS_TABLE_ID"))
 
 oauth_routes = Blueprint("oauth",__name__,url_prefix="/oauth")
+
+@oauth_routes.route("/login")
+def send_auth():
+    if os.environ.get("DISABLE_OAUTH").lower() == "true":
+        return redirect(main_url+"/error?code=423&message=sign+in+is+currently+disabled")
+
+
 
 @oauth_routes.route("/callback")
 def receive_auth(): #handle the data returned from the oauth endpoint
