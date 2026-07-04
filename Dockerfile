@@ -8,7 +8,7 @@ RUN npm install
 COPY frontend/ ./
 RUN npm run build
 
-FROM python:3-14-slim
+FROM python:3.14-slim
 
 WORKDIR /usr/src/starlight
 
