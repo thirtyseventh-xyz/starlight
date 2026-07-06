@@ -1,21 +1,18 @@
 from flask import Blueprint,redirect,request, session
-from pyairtable import Api, formulas
 from slack_sdk import WebClient
 import requests
 import base64
 import os
 import sentry_sdk
 import utils.auth
+import utils.db
+from utils.models import User
 
 slack_client = WebClient(token=os.environ.get("SLACK_BOT_TOKEN"))
 
 encryption_key = base64.urlsafe_b64decode(os.environ.get("ENCRYPTION_KEY"))
 
 main_url = os.environ.get("PROD_MAIN_URL")
-
-airtable_api = Api(os.environ.get("AIRTABLE_API_KEY"))
-auth_table = airtable_api.table(os.environ.get("AIRTABLE_BASE_ID"),os.environ.get("AIRTABLE_AUTH_TABLE_ID"))
-users_table = airtable_api.table(os.environ.get("AIRTABLE_BASE_ID"),os.environ.get("AIRTABLE_USERS_TABLE_ID"))
 
 oauth_routes = Blueprint("oauth",__name__,url_prefix="/oauth")
 
@@ -24,7 +21,7 @@ def send_auth():
     if os.environ.get("DISABLE_OAUTH").lower() == "true":
         return redirect(main_url+"/error?code=423&message=sign+in+is+currently+disabled")
 
-    redirect_url = "https://auth.hackclub.com/oauth/authorize?client_id="+str(os.environ.get("HCA_OAUTH_CLIENT_ID"))+"&redirect_uri="+str(os.environ.get("HCA_OAUTH_REDIRECT_URI").replace(":","%3A").replace("/","%2F"))+"&response_type=code&scope=openid+name+verification_status"
+    redirect_url = "https://auth.hackclub.com/oauth/authorize?client_id="+str(os.environ.get("HCA_OAUTH_CLIENT_ID"))+"&redirect_uri="+str(os.environ.get("HCA_OAUTH_REDIRECT_URI").replace(":","%3A").replace("/","%2F"))+"&response_type=code&scope=openid+name+verification_status+slack_id"
     return redirect(redirect_url)
 
 @oauth_routes.route("/callback")
@@ -79,31 +76,26 @@ def receive_auth(): #handle the data returned from the oauth endpoint
 
     encrypted_token = utils.auth.encrypt_token(access_token, hca_id, encryption_key) #encrypt stuff so we dont get jumped by meta
 
-    #check if an entry for the oidc id already exists in airtable
-    account_search_formula = formulas.match({"OIDC ID":hca_id})
-    account_search_result = auth_table.all(formula=account_search_formula)
+    db_session = utils.db.SessionLocal()
+
+    #check if an entry for the oidc id already exists in the database
+    account_search_result = db_session.query(User).filter(User.oidc_ident == hca_id).all()
 
     if len(account_search_result) == 0:#new account creation
         try:
-            airtable_new_auth_entry = {
-               "OIDC ID": hca_id,
-               "Name": hca_user_data_json['identity']['first_name'] + " " + hca_user_data_json['identity']['last_name'],
-               "Encrypted HCA Access Token": encrypted_token,
-               "Eligible": ysws_eligible,
-               "Slack ID": hca_user_data_json['identity']['slack_id']
-            }
-
-            auth_response = auth_table.create(airtable_new_auth_entry)
-
             slack_user_data = slack_client.users_profile_get(user=hca_user_data_json['identity']['slack_id'])
             slack_display_name = slack_user_data['profile']['display_name_normalized']
 
-            airtable_new_user_entry = {
-                "Username": slack_display_name,
-                "Auth Entry": [auth_response['id']]
-            }
+            new_user = User(
+                oidc_ident=hca_id,
+                hca_token=encrypted_token,
+                eligible=ysws_eligible,
+                slack_id=hca_user_data_json['identity']['slack_id'],
+                username=slack_display_name
+            )
 
-            users_table.create(airtable_new_user_entry)
+            db_session.add(new_user)
+            db_session.commit()
 
             session['user_id'] = hca_id
 
@@ -116,4 +108,5 @@ def receive_auth(): #handle the data returned from the oauth endpoint
     else:
         return main_url+"/error?code=500&message=something%20went%20wrong%20setting%20up%20your%20account.%20please%20contact%20%40thirtyseven%20on%20slack%20immediately!"
 
+    db_session.close()
     return redirect(main_url+"/auth/callback")

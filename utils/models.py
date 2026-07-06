@@ -15,4 +15,4 @@ class User(Base):
     slack_id: Mapped[str]
     join_date: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     username: Mapped[str]
-    associated_project: Mapped[int]
+    associated_project: Mapped[int|None]
