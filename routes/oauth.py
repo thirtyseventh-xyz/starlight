@@ -3,9 +3,9 @@ from pyairtable import Api, formulas
 from slack_sdk import WebClient
 import requests
 import base64
-import auth
 import os
 import sentry_sdk
+import utils.auth
 
 slack_client = WebClient(token=os.environ.get("SLACK_BOT_TOKEN"))
 
@@ -77,7 +77,7 @@ def receive_auth(): #handle the data returned from the oauth endpoint
     if not ysws_eligible: #get out if youre not eligible
         return redirect(main_url+"/error?code=403&message=you+are+not+eligible+to+participate+in+ysws+events")
 
-    encrypted_token = auth.encrypt_token(access_token, hca_id, encryption_key) #encrypt stuff so we dont get jumped by meta
+    encrypted_token = utils.auth.encrypt_token(access_token, hca_id, encryption_key) #encrypt stuff so we dont get jumped by meta
 
     #check if an entry for the oidc id already exists in airtable
     account_search_formula = formulas.match({"OIDC ID":hca_id})
