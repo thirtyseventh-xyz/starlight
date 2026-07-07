@@ -21,6 +21,9 @@ def send_auth():
     if os.environ.get("DISABLE_OAUTH").lower() == "true":
         return redirect(main_url+"/error?code=423&message=sign+in+is+currently+disabled")
 
+    if session.get("user_id"):
+        return redirect(main_url)
+
     redirect_url = "https://auth.hackclub.com/oauth/authorize?client_id="+str(os.environ.get("HCA_OAUTH_CLIENT_ID"))+"&redirect_uri="+str(os.environ.get("HCA_OAUTH_REDIRECT_URI").replace(":","%3A").replace("/","%2F"))+"&response_type=code&scope=openid+name+verification_status+slack_id"
     return redirect(redirect_url)
 
