@@ -1,4 +1,4 @@
-from sqlalchemy import DateTime, func
+from sqlalchemy import DateTime, func, false
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 import datetime
 
@@ -16,3 +16,4 @@ class User(Base):
     join_date: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     username: Mapped[str]
     associated_project: Mapped[int|None]
+    admin: Mapped[bool] = mapped_column(default=False, server_default=false())

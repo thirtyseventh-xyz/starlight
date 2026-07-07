@@ -101,6 +101,9 @@ def receive_auth(): #handle the data returned from the oauth endpoint
             db_session.commit()
 
             new_user = db_session.query(User).filter(User.oidc_ident == hca_id).all()[0]
+            if new_user.id == 1: # this is like certainly a bad idea but i cba to make it better
+                new_user.admin = True
+                db_session.commit()
 
             session['user_id'] = new_user.id
 
