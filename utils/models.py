@@ -1,9 +1,18 @@
-from sqlalchemy import DateTime, func, false, ARRAY, String, ForeignKey
+from sqlalchemy import DateTime, func, false, ARRAY, String, Table, Column, ForeignKey
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 import datetime
 
+
+
 class Base(DeclarativeBase):
     pass
+
+user_project_association = Table(
+    "user_project_association",
+    Base.metadata,
+    Column("user_id", ForeignKey("users.id"), primary_key=True),
+    Column("project_id", ForeignKey("projects.id"), primary_key=True),
+)
 
 class User(Base):
     __tablename__ = "users"
@@ -19,14 +28,14 @@ class User(Base):
 
     join_date:              Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    associated_project_id:  Mapped[int|None] = mapped_column(ForeignKey("projects.id"))
-    associated_project:     Mapped["Project|None"] = relationship(back_populates="users")
+    associated_project:     Mapped[list["Project"]] = relationship(secondary=user_project_association, back_populates="users")
+
 
 class Project(Base):
     __tablename__ = "projects"
 
     id:                 Mapped[int] = mapped_column(primary_key=True)
-    users:              Mapped[list["User"]] = relationship(back_populates="associated_project")
+    users:              Mapped[list["User"]] = relationship(secondary=user_project_association, back_populates="associated_project")
 
     category:           Mapped[str]
     slack_thread:       Mapped[str]
