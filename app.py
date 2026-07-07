@@ -33,7 +33,9 @@ def fancy_404(e):
 from routes.frontend import frontend_routes
 from routes.oauth import oauth_routes
 from routes.misc import misc_api
+from routes.users_api import users_api
 
 app.register_blueprint(frontend_routes)
 app.register_blueprint(oauth_routes)
-app.register_blueprint(misc_routes)
+app.register_blueprint(misc_api)
+app.register_blueprint(users_api)
