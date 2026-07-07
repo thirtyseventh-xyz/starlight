@@ -31,11 +31,11 @@ def fancy_404(e):
     return redirect(main_url+"/error?code=404&message=page+not+found%2E+maybe+you+are+looking+for+this+page+on+the+main+sparkle+domain+and+not+the+api%3F")
 
 from routes.frontend import frontend_routes
-from routes.oauth import oauth_routes
+from routes.oauth import auth
 from routes.misc import misc_api
 from routes.users_api import users_api
 
 app.register_blueprint(frontend_routes)
-app.register_blueprint(oauth_routes)
+app.register_blueprint(auth)
 app.register_blueprint(misc_api)
 app.register_blueprint(users_api)

@@ -14,9 +14,9 @@ encryption_key = base64.urlsafe_b64decode(os.environ.get("ENCRYPTION_KEY"))
 
 main_url = os.environ.get("PROD_MAIN_URL")
 
-oauth_routes = Blueprint("oauth",__name__,url_prefix="/oauth")
+auth = Blueprint("oauth", __name__, url_prefix="/auth")
 
-@oauth_routes.route("/login")
+@auth.route("/login")
 def send_auth():
     if os.environ.get("DISABLE_OAUTH").lower() == "true":
         return redirect(main_url+"/error?code=423&message=sign+in+is+currently+disabled")
@@ -27,7 +27,7 @@ def send_auth():
     redirect_url = "https://auth.hackclub.com/oauth/authorize?client_id="+str(os.environ.get("HCA_OAUTH_CLIENT_ID"))+"&redirect_uri="+str(os.environ.get("HCA_OAUTH_REDIRECT_URI").replace(":","%3A").replace("/","%2F"))+"&response_type=code&scope=openid+name+verification_status+slack_id"
     return redirect(redirect_url)
 
-@oauth_routes.route("/callback")
+@auth.route("/callback")
 def receive_auth(): #handle the data returned from the oauth endpoint
 
     if os.environ.get("DISABLE_OAUTH").lower() == "true":
@@ -118,4 +118,4 @@ def receive_auth(): #handle the data returned from the oauth endpoint
         return main_url+"/error?code=500&message=something%20went%20wrong%20setting%20up%20your%20account.%20please%20contact%20%40thirtyseven%20on%20slack%20immediately!"
 
     db_session.close()
-    return redirect(main_url+"/auth/callback")
+    return redirect(main_url+"/dashboard")
