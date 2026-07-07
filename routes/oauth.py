@@ -119,3 +119,8 @@ def receive_auth(): #handle the data returned from the oauth endpoint
 
     db_session.close()
     return redirect(main_url+"/dashboard")
+
+@auth.route("/logout")
+def logout(): #TODO: make it clear all sessions
+    session.clear()
+    return redirect(main_url)
