@@ -4,9 +4,9 @@ import os
 import requests
 import sentry_sdk
 
-misc_routes = Blueprint("misc",__name__,url_prefix="/api/misc")
+misc_api = Blueprint("misc", __name__, url_prefix="/api/misc")
 
-@misc_routes.route("/rsvp-count")
+@misc_api.route("/rsvp-count")
 @limiter.limit("60 per minute")
 def send_submissions():
     custom_response_headers = {"Access-Control-Allow-Origin": "*"}
@@ -42,6 +42,6 @@ def send_submissions():
 
     return {"total_submissions":submissions},200,custom_response_headers
 
-@misc_routes.route("/status")
+@misc_api.route("/status")
 def basic_status(): # this is entirely the wrong way to do this but it works and i dont care
     return {"ok":"true"},200
