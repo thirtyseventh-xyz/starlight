@@ -4,7 +4,7 @@ import os
 import requests
 import sentry_sdk
 
-misc_routes = Blueprint("misc",__name__,url_prefix="/misc")
+misc_routes = Blueprint("misc",__name__,url_prefix="/api/misc")
 
 @misc_routes.route("/rsvp-count")
 @limiter.limit("60 per minute")
