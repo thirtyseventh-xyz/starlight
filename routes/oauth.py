@@ -100,14 +100,17 @@ def receive_auth(): #handle the data returned from the oauth endpoint
             db_session.add(new_user)
             db_session.commit()
 
-            session['user_id'] = hca_id
+            new_user = db_session.query(User).filter(User.oidc_ident == hca_id).all()[0]
+
+            session['user_id'] = new_user.id
 
         except Exception as e:
             sentry_sdk.capture_exception(e)
             return redirect(main_url + "/error?code=500&message=something+failed+trying+to+create+your+account+in+our+system%2E+please+contact+%40thirtyseven+on+slack+immediately")  #
 
     elif len(account_search_result) == 1: #account already exists
-        session['user_id'] = hca_id
+        existing_account = account_search_result[0]
+        session['user_id'] = existing_account.id
     else:
         return main_url+"/error?code=500&message=something%20went%20wrong%20setting%20up%20your%20account.%20please%20contact%20%40thirtyseven%20on%20slack%20immediately!"
 
