@@ -20,7 +20,8 @@ def get_user_info():
         return {
             "id": user.id,
             "slack_id": user.slack_id,
-            "username": user.username
+            "username": user.username,
+            "join_date": str(user.join_date)
         }, 200
     except Exception as e:
         sentry_sdk.capture_exception(e)
@@ -44,5 +45,3 @@ def update_username():
         return {"status":"error", "error":"internal_server_error"}, 500
     finally:
         db_session.close()
-
-

@@ -4,6 +4,7 @@ import requests
 import base64
 import os
 import sentry_sdk
+import datetime
 import utils.auth
 import utils.db
 from utils.models import User
@@ -120,7 +121,24 @@ def receive_auth(): #handle the data returned from the oauth endpoint
     db_session.close()
     return redirect(main_url+"/dashboard")
 
+@auth.route("/clear-sessions")
+def clear_sessions():
+    db_session = utils.db.SessionLocal()
+    try:
+        user = db_session.query(User).where(User.id == session['user_id']).first()
+
+        user.last_session_clear_date = datetime.datetime.now()
+        db_session.commit()
+
+        session.clear()
+        return redirect(main_url)
+    except Exception as e:
+        sentry_sdk.capture_exception(e)
+        return redirect(main_url+"/error?code=500&message=something+went+wrong+trying+to+clear+your+sessions.%20please%20contact%20%40thirtyseven%20on%20slack%20immediately!")
+    finally:
+        db_session.close()
+
 @auth.route("/logout")
-def logout(): #TODO: make it clear all sessions
+def logout():
     session.clear()
     return redirect(main_url)
