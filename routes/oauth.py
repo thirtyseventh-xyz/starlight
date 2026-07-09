@@ -163,4 +163,12 @@ def hackatime_outgoing():
 
 @auth.route("/hackatime/callback")
 def hackatime_callback():
-    pass
+    try:
+        state = request.args.get("state")
+        code = request.args.get("code")
+
+        if state != session.pop("state"):
+            return redirect(main_url + "/error?code=400&message=invalid+oauth+state")
+    except Exception as e:
+        sentry_sdk.capture_exception(e)
+        return redirect(main_url+"/error?code=500&message=something+went+wrong+trying+to+link+your+hackatime+account")
