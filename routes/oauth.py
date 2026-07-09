@@ -80,6 +80,8 @@ def receive_auth(): #handle the data returned from the oauth endpoint
 
     encrypted_token = utils.auth.encrypt_token(access_token, hca_id, encryption_key) #encrypt stuff so we dont get jumped by meta
 
+    session['created_at'] = datetime.datetime.now(tz=datetime.timezone.utc)
+
     db_session = utils.db.SessionLocal()
 
     #check if an entry for the oidc id already exists in the database
