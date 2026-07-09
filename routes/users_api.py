@@ -35,7 +35,7 @@ def update_username():
     db_session = SessionLocal()
     try:
         user_id = session.get("user_id")
-        user = db_session.query(User).filter(User.id == user_id).all()[0]
+        user = db_session.query(User).filter(User.id == user_id).first()
 
         user.username = request.get_json()['username']
         db_session.commit()
