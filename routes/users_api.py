@@ -2,12 +2,13 @@ import sentry_sdk
 from flask import Blueprint, session, request
 from utils.db import SessionLocal
 from utils.models import User
+import utils.auth
 
 users_api = Blueprint("users_api", __name__, url_prefix="/api/user")
 
 @users_api.before_request
 def auth_check():
-    if not session.get("user_id"):
+    if not utils.auth.check_session(session):
         return {"status":"error","error":"unauthorized"}, 401
 
 @users_api.route("/me")
