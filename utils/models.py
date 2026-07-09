@@ -1,4 +1,4 @@
-from sqlalchemy import DateTime, func, false, ARRAY, String, Table, Column, ForeignKey
+from sqlalchemy import DateTime, func, false, ARRAY, String, Table, Column, ForeignKey, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 import datetime
 
@@ -40,4 +40,6 @@ class Project(Base):
 
     category:           Mapped[str]
     slack_thread:       Mapped[str]
+
     hackatime_projects: Mapped[list[str]] = mapped_column(ARRAY(String))
+    total_hours:        Mapped[int] = mapped_column(default=0,server_default="0")
