@@ -17,6 +17,12 @@ main_url = os.environ.get("PROD_MAIN_URL")
 
 auth = Blueprint("oauth", __name__, url_prefix="/auth")
 
+@auth.before_request
+def check_session():
+    if request.endpoint in ("oauth.clear_sessions", "oauth.logout"):
+        if not utils.auth.check_session(session):
+            return redirect(main_url+"/error?code=401&message=you+are+not+signed+in!")
+
 @auth.route("/login")
 def send_auth():
     if os.environ.get("DISABLE_OAUTH").lower() == "true":
@@ -144,3 +150,11 @@ def clear_sessions():
 def logout():
     session.clear()
     return redirect(main_url)
+
+@auth.route("/hackatime/link")
+def hackatime_outgoing():
+    pass
+
+@auth.route("/hackatime/callback")
+def hackatime_callback():
+    pass
