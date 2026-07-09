@@ -3,7 +3,6 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 import datetime
 
 
-
 class Base(DeclarativeBase):
     pass
 
@@ -17,18 +16,20 @@ user_project_association = Table(
 class User(Base):
     __tablename__ = "users"
 
-    id:                     Mapped[int] = mapped_column(primary_key=True)
-    username:               Mapped[str]
-    slack_id:               Mapped[str]
+    id:                         Mapped[int] = mapped_column(primary_key=True)
+    username:                   Mapped[str]
+    slack_id:                   Mapped[str]
 
-    oidc_ident:             Mapped[str]
-    hca_token:              Mapped[str]
-    eligible:               Mapped[bool]
-    admin:                  Mapped[bool] = mapped_column(default=False, server_default=false())
+    oidc_ident:                 Mapped[str]
+    hca_token:                  Mapped[str]
+    eligible:                   Mapped[bool]
+    admin:                      Mapped[bool] = mapped_column(default=False, server_default=false())
 
-    join_date:              Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    join_date:                  Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    associated_project:     Mapped[list["Project"]] = relationship(secondary=user_project_association, back_populates="users")
+    associated_project:         Mapped[list["Project"]] = relationship(secondary=user_project_association, back_populates="users")
+
+    last_session_clear_date:    Mapped[datetime.datetime|None] = mapped_column(DateTime(timezone=True))
 
 
 class Project(Base):
