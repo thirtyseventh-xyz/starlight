@@ -5,6 +5,7 @@ import base64
 import os
 import sentry_sdk
 import datetime
+import secrets
 import utils.auth
 import utils.db
 from utils.models import User
@@ -19,7 +20,7 @@ auth = Blueprint("oauth", __name__, url_prefix="/auth")
 
 @auth.before_request
 def check_session():
-    if request.endpoint in ("oauth.clear_sessions", "oauth.logout"):
+    if request.endpoint in ("oauth.clear_sessions", "oauth.logout", "oauth.hackatime_outgoing"):
         if not utils.auth.check_session(session):
             return redirect(main_url+"/error?code=401&message=you+are+not+signed+in!")
 
@@ -153,7 +154,12 @@ def logout():
 
 @auth.route("/hackatime/link")
 def hackatime_outgoing():
-    pass
+    state = secrets.token_urlsafe(32)
+    session["oauth_state"] = state
+
+    hackatime_oauth_url = "https://hackatime.hackclub.com/oauth/authorize?client_id="+str(os.environ.get("HACKATIME_OAUTH_CLIENT_ID")+"&redirect_uri="+str(os.environ.get("HACKATIME_OAUTH_REDIRECT_URI"))+"&response_type=code&scope=profile+read&state="+str(state))
+    return redirect(hackatime_oauth_url)
+
 
 @auth.route("/hackatime/callback")
 def hackatime_callback():
