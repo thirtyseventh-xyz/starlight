@@ -115,7 +115,7 @@ def receive_auth(): #handle the data returned from the oauth endpoint
         existing_account = account_search_result[0]
         session['user_id'] = existing_account.id
     else:
-        return main_url+"/error?code=500&message=something%20went%20wrong%20setting%20up%20your%20account.%20please%20contact%20%40thirtyseven%20on%20slack%20immediately!"
+        return redirect(main_url+"/error?code=500&message=something%20went%20wrong%20setting%20up%20your%20account.%20please%20contact%20%40thirtyseven%20on%20slack%20immediately!")
 
     db_session.close()
     return redirect(main_url+"/dashboard")
