@@ -22,6 +22,7 @@ class User(Base):
 
     oidc_ident:                 Mapped[str]
     hca_token:                  Mapped[str]
+    hackatime_token:            Mapped[str|None]
     eligible:                   Mapped[bool]
     admin:                      Mapped[bool] = mapped_column(default=False, server_default=false())
 

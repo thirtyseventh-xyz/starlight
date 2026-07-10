@@ -162,6 +162,7 @@ def hackatime_outgoing():
 
 @auth.route("/hackatime/callback")
 def hackatime_callback():
+    db_session = utils.db.SessionLocal()
     try:
         state = request.args.get("state")
         code = request.args.get("code")
@@ -180,8 +181,17 @@ def hackatime_callback():
         token_req_response = requests.post("https://hackatime.hackclub.com/oauth/token", json=hackatime_token_request_data)
         hackatime_token = token_req_response.json()['access_token']
 
+        user = db_session.query(User).where(User.id == session['user_id']).first()
+
+        hackatime_token = utils.auth.encrypt_token(hackatime_token,user.oidc_ident,encryption_key)
+
+        user.hackatime_token = hackatime_token
+        db_session.commit()
+
         return redirect(main_url)
 
     except Exception as e:
         sentry_sdk.capture_exception(e)
         return redirect(main_url+"/error?code=500&message=something+went+wrong+trying+to+link+your+hackatime+account")
+    finally:
+        db_session.close()
