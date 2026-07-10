@@ -20,7 +20,7 @@ auth = Blueprint("oauth", __name__, url_prefix="/auth")
 
 @auth.before_request
 def check_session():
-    if request.endpoint in ("oauth.clear_sessions", "oauth.logout", "oauth.hackatime_outgoing"):
+    if request.endpoint in ("oauth.clear_sessions", "oauth.logout", "oauth.hackatime_outgoing", "oauth.hackatime_callback"):
         if not utils.auth.check_session(session):
             return redirect(main_url+"/error?code=401&message=you+are+not+signed+in!")
 
