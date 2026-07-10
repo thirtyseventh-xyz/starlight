@@ -167,8 +167,15 @@ def hackatime_callback():
         state = request.args.get("state")
         code = request.args.get("code")
 
-        if state != session.pop("oauth_state"):
+        try:
+            if state != session.pop("oauth_state"):
+                return redirect(main_url + "/error?code=400&message=invalid+oauth+state")
+        except KeyError:
             return redirect(main_url + "/error?code=400&message=invalid+oauth+state")
+
+        if not code:
+            print("the code passed to the hackatime oauth callback param was none, someone broke something")
+            return redirect(main_url + "/error?code=400&message=either%20something%20has%20gone%20horribly%20wrong%2C%20or%20you%20found%20this%20endpoint%20and%20never%20tried%20to%20do%20anything%20important%20in%20the%20first%20place%2E%20if%20you%20didn't%20expect%20an%20error%2C%20please%20contact%20%40thirtyseven%20on%20slack")
 
         hackatime_token_request_data = {
             "client_id": str(os.environ.get("HACKATIME_OAUTH_CLIENT_ID")),
@@ -179,6 +186,21 @@ def hackatime_callback():
         }
 
         token_req_response = requests.post("https://hackatime.hackclub.com/oauth/token", json=hackatime_token_request_data)
+
+        if token_req_response.status_code != 200:
+            if token_req_response.status_code == 400 and token_req_response.json()['error'] == "invalid_grant":
+                print("invalid hackatime oauth grant")
+                return redirect(main_url + "/error?code=401&message=invalid+oauth+grant!+if+you+believe+this+is+a+mistake%2C+contact+%40thirtyseven+on+slack")
+
+            sentry_sdk.capture_message(
+                "request to hackatime for access token failed",
+                level="warning",
+                tags={"token_request_status_code": token_req_response.status_code},
+                extras={"request_json": token_req_response.json()}
+            )
+            return redirect(
+                main_url + "/error?code=500&message=something+has+gone+very+wrong+server+side+%28probably%29%2C+please+let+%40thirtyseven+know+on+slack+that+this+happened")
+
         hackatime_token = token_req_response.json()['access_token']
 
         user = db_session.query(User).where(User.id == session['user_id']).first()
