@@ -1,4 +1,6 @@
 import os
+import base64
+import requests
 import sentry_sdk
 from flask import Blueprint, session, request
 import utils.db
@@ -6,7 +8,7 @@ from utils.models import User
 import utils.auth
 
 users_api = Blueprint("users_api", __name__, url_prefix="/api/user")
-encryption_key = os.environ.get("ENCRYPTION_KEY")
+encryption_key = base64.urlsafe_b64decode(os.environ.get("ENCRYPTION_KEY"))
 
 @users_api.before_request
 def auth_check():
@@ -59,6 +61,21 @@ def get_all_hackatime_projects():
         encrypted_hackatime_token = user.hackatime_token
         hackatime_token = utils.auth.decrypt_token(encrypted_hackatime_token,user.oidc_ident,encryption_key)
 
+        hackatime_auth_headers = {"Authorization": "Bearer "+hackatime_token}
+
+        projects_data = requests.get("https://hackatime.hackclub.com/api/v1/authenticated/projects", headers=hackatime_auth_headers)
+        projects = projects_data.json()['projects']
+
+        returned_data = []
+        for project in projects:
+            project_name = project['name']
+            project_seconds = project['total_seconds']
+
+            returned_data.append({
+                "name": project_name,
+                "time": project_seconds
+            })
+        return returned_data
 
     except Exception as e:
         sentry_sdk.capture_exception(e)
