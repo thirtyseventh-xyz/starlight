@@ -1,6 +1,6 @@
 import sentry_sdk
 from flask import Blueprint, session, request
-from utils.db import SessionLocal
+import utils.db
 from utils.models import User
 import utils.auth
 
@@ -13,7 +13,7 @@ def auth_check():
 
 @users_api.route("/me")
 def get_user_info():
-    db_session = SessionLocal()
+    db_session = utils.db.SessionLocal()
     try:
         user_id = session.get("user_id")
         user = db_session.query(User).filter(User.id == user_id).all()[0]
@@ -32,7 +32,7 @@ def get_user_info():
 
 @users_api.route("/me/update-username", methods=['PUT'])
 def update_username():
-    db_session = SessionLocal()
+    db_session = utils.db.SessionLocal()
     try:
         user_id = session.get("user_id")
         user = db_session.query(User).filter(User.id == user_id).first()
