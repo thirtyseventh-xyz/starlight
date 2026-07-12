@@ -40,3 +40,13 @@ def check_session(session) -> bool: # returns true if the session is valid
         return True
     session.clear()
     return False
+
+def check_admin(session) -> bool:
+    valid_session = check_session(session)
+    if valid_session:
+        db_session = utils.db.SessionLocal()
+        user = db_session.query(User).where(User.id == session['user_id']).first()
+
+        if user.admin:
+            return True
+    return False
