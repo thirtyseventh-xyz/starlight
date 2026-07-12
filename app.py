@@ -1,8 +1,9 @@
 import os
 import sentry_sdk
-from flask import Flask, redirect
+from flask import Flask, render_template
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from werkzeug.exceptions import HTTPException
 from flask_session import Session
 from dotenv import load_dotenv
 from sentry_sdk.integrations.flask import FlaskIntegration
@@ -26,9 +27,9 @@ app.config['SESSION_COOKIE_SAMESITE'] = "Lax"
 Session(app)
 
 
-@app.errorhandler(404)
-def fancy_404(e):
-    return redirect(main_url+"/error?code=404&message=page+not+found%2E+maybe+you+are+looking+for+this+page+on+the+main+sparkle+domain+and+not+the+api%3F")
+@app.errorhandler(HTTPException)
+def custom_error_page(e):
+    return render_template("error.html", error_code=e.code, error_description=e.description)
 
 from routes.frontend import frontend_routes
 from routes.oauth import auth

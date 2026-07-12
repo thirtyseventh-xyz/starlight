@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>something went wrong!</title>
+
+    <link rel="stylesheet" href="/static/error_styles.css">
+
+    </head>
+    <body>
+        <div id="root">
+            <div class="flex min-h-screen w-screen flex-col">
+                <div class="flex flex-1">
+                    <div class="text-center font-dynapuff min-w-screen min-h-screen flex items-center justify-center">
+                        <div class=" p-8 rounded-lg text-white">
+                            <h1 class="text-6xl font-bold mb-4">{{ error_code }}</h1>
+                            <p class="text-xl">{{ error_description }}</p>
+
+                            <button class="p-2 px-5 bg-green-600 mt-4 border-4 border-black/50 hover:scale-95 transition-all transition-75 hover:cursor-pointer">Return home</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
