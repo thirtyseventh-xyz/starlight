@@ -34,8 +34,10 @@ from routes.frontend import frontend_routes
 from routes.oauth import auth
 from routes.misc import misc_api
 from routes.users_api import users_api
+from routes.admin_api import admin_api
 
 app.register_blueprint(frontend_routes)
 app.register_blueprint(auth)
 app.register_blueprint(misc_api)
 app.register_blueprint(users_api)
+app.register_blueprint(admin_api)
