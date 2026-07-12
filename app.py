@@ -1,6 +1,6 @@
 import os
 import sentry_sdk
-from flask import Flask, request, redirect, make_response
+from flask import Flask, redirect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_session import Session
@@ -33,8 +33,8 @@ def fancy_404(e):
 from routes.frontend import frontend_routes
 from routes.oauth import auth
 from routes.misc import misc_api
-from routes.users_api import users_api
-from routes.admin_api import admin_api
+from routes.api.users_api import users_api
+from routes.api.admin_api import admin_api
 
 app.register_blueprint(frontend_routes)
 app.register_blueprint(auth)
