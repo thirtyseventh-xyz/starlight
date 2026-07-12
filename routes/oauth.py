@@ -216,6 +216,9 @@ def hackatime_callback():
             )
             return redirect(main_url + "/error?code=500&message=hackatime+user+data+does+not+match+hca+data!+this+is+a+problem%2C+please+contact+%40thirtyseven")
 
+        if hackatime_user_data.json()['trust_factor']['trust_value'] == 1:
+            return redirect(main_url + "/error?code=403&message=you+appear+to+be+banned+from+hackatime.+if+you+believe+this+is+a+mistake%2C+please+contact+%40thirtyseven")
+
         hackatime_token = utils.auth.encrypt_token(hackatime_token,user.oidc_ident,encryption_key)
 
         user.hackatime_token = hackatime_token
