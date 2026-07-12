@@ -198,12 +198,23 @@ def hackatime_callback():
                 tags={"token_request_status_code": token_req_response.status_code},
                 extras={"request_json": token_req_response.json()}
             )
-            return redirect(
-                main_url + "/error?code=500&message=something+has+gone+very+wrong+server+side+%28probably%29%2C+please+let+%40thirtyseven+know+on+slack+that+this+happened")
+            return redirect(main_url + "/error?code=500&message=something+has+gone+very+wrong+server+side+%28probably%29%2C+please+let+%40thirtyseven+know+on+slack+that+this+happened")
 
         hackatime_token = token_req_response.json()['access_token']
 
         user = db_session.query(User).where(User.id == session['user_id']).first()
+
+        hackatime_auth_headers = {"Authorization": "Bearer " + hackatime_token}
+        hackatime_user_data = requests.get("https://hackatime.hackclub.com/api/v1/authenticated/me", headers=hackatime_auth_headers)
+
+        if user.slack_id != hackatime_user_data.json()['slack_id']:
+            sentry_sdk.capture_message(
+                "slack id acquired from hca does not match id from hackatime",
+                level="warning",
+                tags={"user_ident":user.oidc_ident},
+                extras={"hackatime_data":hackatime_user_data.json(),}
+            )
+            return redirect(main_url + "/error?code=500&message=hackatime+user+data+does+not+match+hca+data!+this+is+a+problem%2C+please+contact+%40thirtyseven")
 
         hackatime_token = utils.auth.encrypt_token(hackatime_token,user.oidc_ident,encryption_key)
 
