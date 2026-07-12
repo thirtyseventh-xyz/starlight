@@ -17,11 +17,13 @@ def get_user_info(user_id):
     try:
         if user_id.isdigit():
             user_id = int(user_id)
-
             user = db_session.query(User).filter(User.id == user_id).first()
+        else:
+            user = db_session.query(User).filter(User.oidc_ident == user_id).first()
+        if user:
             return {
                 "id": user.id,
-                "oidc_ident":user.oidc_ident,
+                "oidc_ident": user.oidc_ident,
                 "slack_id": user.slack_id,
                 "username": user.username,
                 "join_date": str(user.join_date),
