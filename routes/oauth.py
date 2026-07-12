@@ -177,6 +177,8 @@ def hackatime_callback():
             print("the code passed to the hackatime oauth callback param was none, someone broke something")
             return redirect(main_url + "/error?code=400&message=either%20something%20has%20gone%20horribly%20wrong%2C%20or%20you%20found%20this%20endpoint%20and%20never%20tried%20to%20do%20anything%20important%20in%20the%20first%20place%2E%20if%20you%20didn't%20expect%20an%20error%2C%20please%20contact%20%40thirtyseven%20on%20slack")
 
+        user = db_session.query(User).where(User.id == session['user_id']).first()
+
         hackatime_token_request_data = {
             "client_id": str(os.environ.get("HACKATIME_OAUTH_CLIENT_ID")),
             "client_secret": str(os.environ.get("HACKATIME_OAUTH_CLIENT_SECRET")),
@@ -195,14 +197,12 @@ def hackatime_callback():
             sentry_sdk.capture_message(
                 "request to hackatime for access token failed",
                 level="warning",
-                tags={"token_request_status_code": token_req_response.status_code},
+                tags={"user_id":user.oidc_ident,"token_request_status_code": token_req_response.status_code},
                 extras={"request_json": token_req_response.json()}
             )
             return redirect(main_url + "/error?code=500&message=something+has+gone+very+wrong+server+side+%28probably%29%2C+please+let+%40thirtyseven+know+on+slack+that+this+happened")
 
         hackatime_token = token_req_response.json()['access_token']
-
-        user = db_session.query(User).where(User.id == session['user_id']).first()
 
         hackatime_auth_headers = {"Authorization": "Bearer " + hackatime_token}
         hackatime_user_data = requests.get("https://hackatime.hackclub.com/api/v1/authenticated/me", headers=hackatime_auth_headers)
@@ -227,7 +227,7 @@ def hackatime_callback():
         return redirect(main_url)
 
     except Exception as e:
-        sentry_sdk.capture_exception(e)
+        sentry_sdk.capture_exception(e,extras={"user_id":user.oidc_ident})
         return redirect(main_url+"/error?code=500&message=something+went+wrong+trying+to+link+your+hackatime+account")
     finally:
         db_session.close()

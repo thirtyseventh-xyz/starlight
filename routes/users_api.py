@@ -29,7 +29,7 @@ def get_user_info():
             "join_date": str(user.join_date)
         }, 200
     except Exception as e:
-        sentry_sdk.capture_exception(e)
+        sentry_sdk.capture_exception(e,extras={"user_id":user.oidc_ident})
         return {"status": "error", "error": "internal_server_error"}, 500
     finally:
         db_session.close()
@@ -46,7 +46,7 @@ def update_username():
 
         return {"status":"success"}, 200
     except Exception as e:
-        sentry_sdk.capture_exception(e)
+        sentry_sdk.capture_exception(e,extras={"user_id":user.oidc_ident})
         return {"status":"error", "error":"internal_server_error"}, 500
     finally:
         db_session.close()
@@ -78,7 +78,7 @@ def get_all_hackatime_projects():
         return returned_data
 
     except Exception as e:
-        sentry_sdk.capture_exception(e)
+        sentry_sdk.capture_exception(e,extras={"user_id":user.oidc_ident})
         return {"status":"error", "error":"internal_server_error"}, 500
     finally:
         db_session.close()

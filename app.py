@@ -18,8 +18,8 @@ limiter = Limiter(get_remote_address,app=app, default_limits=["20000 per day", "
 app.secret_key = os.environ.get("FLASK_SECRET_KEY")
 
 app.config["SESSION_TYPE"] = "filesystem"
-app.config['SESSION_COOKIE_DOMAIN'] = "."+main_url
-app.config['SESSION_COOKIE_SECURE'] = True
+# app.config['SESSION_COOKIE_DOMAIN'] = "."+main_url
+# app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = "Lax"
 
