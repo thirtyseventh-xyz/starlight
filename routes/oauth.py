@@ -1,4 +1,4 @@
-from flask import Blueprint,redirect,request, session
+from flask import Blueprint,redirect,request, session,abort
 from slack_sdk import WebClient
 import requests
 import base64
@@ -22,12 +22,12 @@ auth = Blueprint("oauth", __name__, url_prefix="/auth")
 def check_session():
     if request.endpoint in ("oauth.clear_sessions", "oauth.logout", "oauth.hackatime_outgoing", "oauth.hackatime_callback"):
         if not utils.auth.check_session(session):
-            return redirect(main_url+"/error?code=401&message=you+are+not+signed+in!")
+            abort(401, description="you are not signed in!")
 
 @auth.route("/login")
 def send_auth():
     if os.environ.get("DISABLE_OAUTH").lower() == "true":
-        return redirect(main_url+"/error?code=423&message=sign+in+is+currently+disabled")
+        abort(423, description="signing in is currently disabled")
 
     if utils.auth.check_session(session):
         return redirect(main_url)
@@ -39,13 +39,13 @@ def send_auth():
 def receive_auth(): #handle the data returned from the oauth endpoint
 
     if os.environ.get("DISABLE_OAUTH").lower() == "true":
-        return redirect(main_url+"/error?code=423&message=sign+in+is+currently+disabled")
+        abort(423, description="signing in is currently disabled")
 
     code = request.args.get("code")
 
     if code is None:
         print("the code passed to the oauth callback param was none, someone broke something")
-        return redirect(main_url+ "/error?code=400&message=either%20something%20has%20gone%20horribly%20wrong%2C%20or%20you%20found%20this%20endpoint%20and%20never%20tried%20to%20do%20anything%20important%20in%20the%20first%20place%2E%20if%20you%20didn't%20expect%20an%20error%2C%20please%20contact%20%40thirtyseven%20on%20slack")
+        abort(400, description="either something has gone horribly wrong, or you found this endpoint and never tried to do anything important in the first place. if you didn't expect an error, please contact @thirtyseven on slack")
 
 
     token_request_payload = {
@@ -60,7 +60,7 @@ def receive_auth(): #handle the data returned from the oauth endpoint
     if token_request_result.status_code != 200:
         if token_request_result.status_code == 400 and token_request_result.json()['error'] == "invalid_grant":
             print("print invalid hca grant")
-            return redirect(main_url+"/error?code=401&message=invalid+oauth+grant!+if+you+believe+this+is+a+mistake%2C+contact+%40thirtyseven+on+slack")
+            return abort(401, description="invalid hca grant!")
 
         sentry_sdk.capture_message(
             "request to hca for access token failed",
@@ -68,7 +68,7 @@ def receive_auth(): #handle the data returned from the oauth endpoint
             tags={"token_request_status_code":token_request_result.status_code},
             extras={"request_json":token_request_result.json()}
         )
-        return redirect(main_url+"/error?code=500&message=something+has+gone+very+wrong+server+side+%28probably%29%2C+please+let+%40thirtyseven+know+on+slack+that+this+happened")
+        abort(500, description="something has gone very wrong server side (probably). please let @thirtyseven on slack know this happened!")
 
     token_request_response = token_request_result.json()
     access_token = token_request_response['access_token']
@@ -83,7 +83,7 @@ def receive_auth(): #handle the data returned from the oauth endpoint
     ysws_eligible = hca_user_data_json['identity']['ysws_eligible']
 
     if not ysws_eligible: #get out if youre not eligible
-        return redirect(main_url+"/error?code=403&message=you+are+not+eligible+to+participate+in+ysws+events")
+        abort(403, description="you are not eligible to participate in ysws events!")
 
     encrypted_token = utils.auth.encrypt_token(access_token, hca_id, encryption_key) #encrypt stuff so we dont get jumped by meta
 
@@ -119,13 +119,13 @@ def receive_auth(): #handle the data returned from the oauth endpoint
 
         except Exception as e:
             sentry_sdk.capture_exception(e)
-            return redirect(main_url + "/error?code=500&message=something+failed+trying+to+create+your+account+in+our+system%2E+please+contact+%40thirtyseven+on+slack+immediately")  #
+            abort(500, description="something went wrong setting up your account! please let @thirtyseven on slack know this happened immediately!")
 
     elif len(account_search_result) == 1: #account already exists
         existing_account = account_search_result[0]
         session['user_id'] = existing_account.id
     else:
-        return redirect(main_url+"/error?code=500&message=something%20went%20wrong%20setting%20up%20your%20account.%20please%20contact%20%40thirtyseven%20on%20slack%20immediately!")
+        abort(500, description="something went wrong during the auth process")
 
     db_session.close()
     return redirect(main_url+"/dashboard")
@@ -143,7 +143,7 @@ def clear_sessions():
         return redirect(main_url)
     except Exception as e:
         sentry_sdk.capture_exception(e)
-        return redirect(main_url+"/error?code=500&message=something+went+wrong+trying+to+clear+your+sessions.%20please%20contact%20%40thirtyseven%20on%20slack%20immediately!")
+        abort(500, description="something went wrong trying to clear your sessions!")
     finally:
         db_session.close()
 
@@ -169,13 +169,13 @@ def hackatime_callback():
 
         try:
             if state != session.pop("oauth_state"):
-                return redirect(main_url + "/error?code=400&message=invalid+oauth+state")
+                abort(400, description="invalid oauth state")
         except KeyError:
-            return redirect(main_url + "/error?code=400&message=invalid+oauth+state")
+            abort(400, description="invalid oauth state")
 
         if not code:
             print("the code passed to the hackatime oauth callback param was none, someone broke something")
-            return redirect(main_url + "/error?code=400&message=either%20something%20has%20gone%20horribly%20wrong%2C%20or%20you%20found%20this%20endpoint%20and%20never%20tried%20to%20do%20anything%20important%20in%20the%20first%20place%2E%20if%20you%20didn't%20expect%20an%20error%2C%20please%20contact%20%40thirtyseven%20on%20slack")
+            abort(400,description="either something has gone horribly wrong, or you found this endpoint and never tried to do anything important in the first place. if you didn't expect an error, please contact @thirtyseven on slack")
 
         user = db_session.query(User).where(User.id == session['user_id']).first()
 
@@ -192,7 +192,7 @@ def hackatime_callback():
         if token_req_response.status_code != 200:
             if token_req_response.status_code == 400 and token_req_response.json()['error'] == "invalid_grant":
                 print("invalid hackatime oauth grant")
-                return redirect(main_url + "/error?code=401&message=invalid+oauth+grant!+if+you+believe+this+is+a+mistake%2C+contact+%40thirtyseven+on+slack")
+                return abort(401, description="invalid hackatime oauth grant!")
 
             sentry_sdk.capture_message(
                 "request to hackatime for access token failed",
@@ -200,7 +200,7 @@ def hackatime_callback():
                 tags={"user_id":user.oidc_ident,"token_request_status_code": token_req_response.status_code},
                 extras={"request_json": token_req_response.json()}
             )
-            return redirect(main_url + "/error?code=500&message=something+has+gone+very+wrong+server+side+%28probably%29%2C+please+let+%40thirtyseven+know+on+slack+that+this+happened")
+            abort(500,description="something has gone very wrong server side (probably). please let @thirtyseven on slack know this happened!")
 
         hackatime_token = token_req_response.json()['access_token']
 
@@ -214,10 +214,10 @@ def hackatime_callback():
                 tags={"user_ident":user.oidc_ident},
                 extras={"hackatime_data":hackatime_user_data.json(),}
             )
-            return redirect(main_url + "/error?code=500&message=hackatime+user+data+does+not+match+hca+data!+this+is+a+problem%2C+please+contact+%40thirtyseven")
+            abort(500, description="hackatime data does not match hca data!")
 
         if hackatime_user_data.json()['trust_factor']['trust_value'] == 1:
-            return redirect(main_url + "/error?code=403&message=you+appear+to+be+banned+from+hackatime.+if+you+believe+this+is+a+mistake%2C+please+contact+%40thirtyseven")
+            abort(403, description="you appear to be banned from hackatime. if you believe this is a mistake, contact @thirtyseven on slack")
 
         hackatime_token = utils.auth.encrypt_token(hackatime_token,user.oidc_ident,encryption_key)
 
@@ -228,6 +228,6 @@ def hackatime_callback():
 
     except Exception as e:
         sentry_sdk.capture_exception(e,extras={"user_id":user.oidc_ident})
-        return redirect(main_url+"/error?code=500&message=something+went+wrong+trying+to+link+your+hackatime+account")
+        abort(500, description="something went wrong trying to link your hackatime account")
     finally:
         db_session.close()
