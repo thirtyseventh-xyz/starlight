@@ -28,7 +28,7 @@ class User(Base):
 
     join_date:                  Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    associated_project:         Mapped[list["Project"]] = relationship(secondary=user_project_association, back_populates="users")
+    associated_projects:        Mapped[list["Project"]] = relationship(secondary=user_project_association, back_populates="users")
 
     last_session_clear_date:    Mapped[datetime.datetime|None] = mapped_column(DateTime(timezone=True))
 
