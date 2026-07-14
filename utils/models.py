@@ -48,6 +48,9 @@ class Project(Base):
 
     review_status:      Mapped[int] = mapped_column(default=0,server_default="0") #0 is not submitted, 1 is submitted but unreviewed, 2 is passed review
     # TODO:this ^^^ should probably be a dict with values at some point but i cba to right now
+    prize_redeemed:     Mapped[bool] = mapped_column(default=False, server_default=false())
+    order:              Mapped["Order|None"] = relationship(back_populates="project")
+    order_id:           Mapped[int|None] = mapped_column(ForeignKey("orders.id"))
 
 
 class ShopItem(Base):
@@ -70,6 +73,8 @@ class Order(Base):
 
     user:       Mapped["User"] = relationship(back_populates="orders")
     user_id:    Mapped[int] = mapped_column(ForeignKey("users.id"))
+
+    project:    Mapped["Project"] = relationship(back_populates="order")
 
     order_date: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
