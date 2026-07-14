@@ -2,7 +2,8 @@ import os
 import base64
 import requests
 import sentry_sdk
-from flask import Blueprint, session, request
+from flask import Blueprint, session, request, jsonify, abort
+from werkzeug.exceptions import HTTPException
 import utils.db
 from utils.models import User
 import utils.auth
@@ -10,10 +11,14 @@ import utils.auth
 users_api = Blueprint("users_api", __name__, url_prefix="/api/user")
 encryption_key = base64.urlsafe_b64decode(os.environ.get("ENCRYPTION_KEY"))
 
+@users_api.errorhandler(HTTPException)
+def json_error_reporting(e):
+    return jsonify(error=e.name,context=e.description), e.code
+
 @users_api.before_request
 def auth_check():
     if not utils.auth.check_session(session):
-        return {"status":"error","error":"unauthorized"}, 401
+        abort(401,description="invalid_session")
 
 @users_api.route("/me")
 def get_user_info():
@@ -30,7 +35,7 @@ def get_user_info():
         }, 200
     except Exception as e:
         sentry_sdk.capture_exception(e,extras={"user_id":user.oidc_ident})
-        return {"status": "error", "error": "internal_server_error"}, 500
+        abort(500,description="internal_server_error")
     finally:
         db_session.close()
 
@@ -47,7 +52,7 @@ def update_username():
         return {"status":"success"}, 200
     except Exception as e:
         sentry_sdk.capture_exception(e,extras={"user_id":user.oidc_ident})
-        return {"status":"error", "error":"internal_server_error"}, 500
+        abort(500,description="internal_server_error")
     finally:
         db_session.close()
 
@@ -79,6 +84,6 @@ def get_all_hackatime_projects():
 
     except Exception as e:
         sentry_sdk.capture_exception(e,extras={"user_id":user.oidc_ident})
-        return {"status":"error", "error":"internal_server_error"}, 500
+        abort(500,description="internal_server_error")
     finally:
         db_session.close()

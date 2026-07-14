@@ -1,15 +1,21 @@
-from flask import Blueprint, session, request
+from flask import Blueprint, session, request, jsonify, abort
+from werkzeug.exceptions import HTTPException
 from utils.models import User, Order, Project
 import utils.db
 import utils.auth
 import sentry_sdk
 
-shop_api = Blueprint("shop_api",__name__,static_url_path="/api/shop")
+shop_api = Blueprint("shop_api",__name__,url_prefix="/api/shop")
+
+@shop_api.errorhandler(HTTPException)
+def json_error_reporting(e):
+    return jsonify(error=e.name,context=e.description), e.code
 
 @shop_api.before_request
 def auth_check():
     if not utils.auth.check_session(session):
-        return {"status":"error","error":"unauthorized"}, 401
+        abort(401,description="invalid_session")
+
 
 @shop_api.route("/order", methods=["POST"])
 def order_item():
@@ -24,11 +30,11 @@ def order_item():
         project = db_session.query(Project).filter(Project.id == project_id).first()
 
         if not project:
-            return {"status":"error","error":"project does not exist"}, 404
+            abort(404,description="nonexistent_project")
         if not project in user.associated_projects:
-            return {"status":"error","error":"project is not associated with user ordering"}, 400
+            abort(403,description="project_not_associated_with_user")
         if project.prize_redeemed:
-            return {"status":"error","error":"project has already had a prize redeemed"}, 422
+            abort(422,description="prize_already_redeemed")
 
         order = Order(
             item_id=item_id,
@@ -41,6 +47,6 @@ def order_item():
 
     except Exception as e:
         sentry_sdk.capture_exception(e,extras={"user_id":user.oidc_ident})
-        return {"status":"error", "error":"internal_server_error"}, 500
+        abort(500,description="internal_server_error")
     finally:
         db_session.close()

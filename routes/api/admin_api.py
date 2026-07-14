@@ -1,15 +1,20 @@
 import sentry_sdk
-from flask import Blueprint,session
+from flask import Blueprint, session, jsonify, abort
+from werkzeug.exceptions import HTTPException
 import utils.db
 from utils.models import User
 import utils.auth
 
 admin_api = Blueprint("admin_api",__name__,url_prefix="/api/admin")
 
+@admin_api.errorhandler(HTTPException)
+def json_error_reporting(e):
+    return jsonify(error=e.name,context=e.description), e.code
+
 @admin_api.before_request
 def auth_check():
     if not utils.auth.check_admin(session):
-        return {"status":"error","error":"unauthorized"}, 401
+        abort(401,description="invalid_session")
 
 @admin_api.route("/user/info/<user_id>")
 def get_user_info(user_id):
@@ -32,6 +37,6 @@ def get_user_info(user_id):
             }
     except Exception as e:
         sentry_sdk.capture_exception(e)
-        return {"status": "error", "error": "internal_server_error"}, 500
+        abort(500,description="internal_server_error")
     finally:
         db_session.close()
