@@ -72,3 +72,21 @@ def get_all_shop_items():
         abort(500, description="internal_server_error")
     finally:
         db_session.close()
+
+@shop_api.route("/item/<item_id>")
+def get_shop_item(item_id):
+    db_session = utils.db.SessionLocal()
+    try:
+        item = db_session.query(ShopItem).filter(ShopItem.id == item_id).first()
+
+        return {
+            "name":item.name,
+            "description":item.description,
+            "image_location":"/static/shop_images/"+item.image_location,
+            "id":item.id
+        }
+    except Exception as e:
+        sentry_sdk.capture_exception(e)
+        abort(500, description="internal_server_error")
+    finally:
+        db_session.close()
