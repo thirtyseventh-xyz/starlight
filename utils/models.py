@@ -51,22 +51,22 @@ class Project(Base):
 class ShopItem(Base):
     __tablename__ = "shop_items"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id:             Mapped[int] = mapped_column(primary_key=True)
 
-    name: Mapped[str]
-    description: Mapped[str]
+    name:           Mapped[str]
+    description:    Mapped[str]
 
-    orders: Mapped[list["ShopItem"]] = relationship(back_populates="item")
+    orders:         Mapped[list["ShopItem"]] = relationship(back_populates="item")
 
 class Order(Base):
     __tablename__ = "orders"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id:         Mapped[int] = mapped_column(primary_key=True)
 
-    item: Mapped["ShopItem"] = relationship(back_populates="orders")
-    item_id: Mapped[int] = mapped_column(ForeignKey("shop_items.id"))
+    item:       Mapped["ShopItem"] = relationship(back_populates="orders")
+    item_id:    Mapped[int] = mapped_column(ForeignKey("shop_items.id"))
 
     order_date: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    fulfilled: Mapped[bool] = mapped_column(default=False, server_default=false())
+    fulfilled:  Mapped[bool] = mapped_column(default=False, server_default=false())
 
