@@ -1,6 +1,6 @@
 from flask import Blueprint, session, request, jsonify, abort
 from werkzeug.exceptions import HTTPException
-from utils.models import User, Order, Project
+from utils.models import User, Order, Project, ShopItem
 import utils.db
 import utils.auth
 import sentry_sdk
@@ -48,5 +48,27 @@ def order_item():
     except Exception as e:
         sentry_sdk.capture_exception(e,extras={"user_id":user.oidc_ident})
         abort(500,description="internal_server_error")
+    finally:
+        db_session.close()
+
+@shop_api.route("/item/all")
+def get_all_shop_items():
+    db_session = utils.db.SessionLocal()
+    try:
+        items = db_session.query(ShopItem).all()
+
+        items_data:list = []
+        for item in items:
+            item_data = {
+                "name":item.name,
+                "description":item.description,
+                "image_location":"/static/shop_images/"+item.image_location,
+                "id":item.id
+            }
+            items_data.append(item_data)
+        return items_data
+    except Exception as e:
+        sentry_sdk.capture_exception(e)
+        abort(500, description="internal_server_error")
     finally:
         db_session.close()
