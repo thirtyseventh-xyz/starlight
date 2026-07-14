@@ -23,6 +23,13 @@ def order_item():
 
         project = db_session.query(Project).filter(Project.id == project_id).first()
 
+        if not project:
+            return {"status":"error","error":"project does not exist"}, 404
+        if not project in user.associated_projects:
+            return {"status":"error","error":"project is not associated with user ordering"}, 400
+        if project.prize_redeemed:
+            return {"status":"error","error":"project has already had a prize redeemed"}, 422
+
         order = Order(
             item_id=item_id,
             user=user,
