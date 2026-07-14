@@ -32,6 +32,8 @@ class User(Base):
 
     last_session_clear_date:    Mapped[datetime.datetime|None] = mapped_column(DateTime(timezone=True))
 
+    orders:                     Mapped[list["Order"]] = relationship(back_populates="orders")
+
 class Project(Base):
     __tablename__ = "projects"
 
@@ -65,6 +67,9 @@ class Order(Base):
 
     item:       Mapped["ShopItem"] = relationship(back_populates="orders")
     item_id:    Mapped[int] = mapped_column(ForeignKey("shop_items.id"))
+
+    user:       Mapped["User"] = relationship(back_populates="orders")
+    user_id:    Mapped["User"] = mapped_column(ForeignKey("users.id"))
 
     order_date: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
