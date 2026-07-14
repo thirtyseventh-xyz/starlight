@@ -32,13 +32,13 @@ class User(Base):
 
     last_session_clear_date:    Mapped[datetime.datetime|None] = mapped_column(DateTime(timezone=True))
 
-    orders:                     Mapped[list["Order"]] = relationship(back_populates="orders")
+    orders:                     Mapped[list["Order"]] = relationship(back_populates="user")
 
 class Project(Base):
     __tablename__ = "projects"
 
     id:                 Mapped[int] = mapped_column(primary_key=True)
-    users:              Mapped[list["User"]] = relationship(secondary=user_project_association, back_populates="associated_project")
+    users:              Mapped[list["User"]] = relationship(secondary=user_project_association, back_populates="associated_projects")
 
     category:           Mapped[str]
     slack_thread:       Mapped[str]
@@ -58,7 +58,7 @@ class ShopItem(Base):
     name:           Mapped[str]
     description:    Mapped[str]
 
-    orders:         Mapped[list["ShopItem"]] = relationship(back_populates="item")
+    orders:         Mapped[list["Order"]] = relationship(back_populates="item")
 
 class Order(Base):
     __tablename__ = "orders"
@@ -69,7 +69,7 @@ class Order(Base):
     item_id:    Mapped[int] = mapped_column(ForeignKey("shop_items.id"))
 
     user:       Mapped["User"] = relationship(back_populates="orders")
-    user_id:    Mapped["User"] = mapped_column(ForeignKey("users.id"))
+    user_id:    Mapped[int] = mapped_column(ForeignKey("users.id"))
 
     order_date: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
