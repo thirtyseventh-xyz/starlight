@@ -66,3 +66,7 @@ class Order(Base):
     item: Mapped["ShopItem"] = relationship(back_populates="orders")
     item_id: Mapped[int] = mapped_column(ForeignKey("shop_items.id"))
 
+    order_date: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    fulfilled: Mapped[bool] = mapped_column(default=False, server_default=false())
+
