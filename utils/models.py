@@ -32,7 +32,6 @@ class User(Base):
 
     last_session_clear_date:    Mapped[datetime.datetime|None] = mapped_column(DateTime(timezone=True))
 
-
 class Project(Base):
     __tablename__ = "projects"
 
@@ -47,3 +46,23 @@ class Project(Base):
 
     review_status:      Mapped[int] = mapped_column(default=0,server_default="0") #0 is not submitted, 1 is submitted but unreviewed, 2 is passed review
     # TODO:this ^^^ should probably be a dict with values at some point but i cba to right now
+
+
+class ShopItem(Base):
+    __tablename__ = "shop_items"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+
+    name: Mapped[str]
+    description: Mapped[str]
+
+    orders: Mapped[list["ShopItem"]] = relationship(back_populates="item")
+
+class Order(Base):
+    __tablename__ = "orders"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+
+    item: Mapped["ShopItem"] = relationship(back_populates="orders")
+    item_id: Mapped[int] = mapped_column(ForeignKey("shop_items.id"))
+
