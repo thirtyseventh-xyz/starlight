@@ -1,5 +1,5 @@
-from flask import Blueprint, session
-from utils.models import User, ShopItem, Order
+from flask import Blueprint, session, request
+from utils.models import User, Order, Project
 import utils.db
 import utils.auth
 import sentry_sdk
@@ -17,6 +17,20 @@ def order_item():
     try:
         user_id = session.get("user_id")
         user = db_session.query(User).filter(User.id == user_id).first()
+
+        item_id:int = request.json()['shop_item_id']
+        project_id:int = request.json()['associated_project_id']
+
+        project = db_session.query(Project).filter(Project.id == project_id).first()
+
+        order = Order(
+            item_id=item_id,
+            user=user,
+            project=project
+        )
+
+        db_session.add(order)
+        db_session.commit()
 
     except Exception as e:
         sentry_sdk.capture_exception(e,extras={"user_id":user.oidc_ident})
