@@ -60,6 +60,7 @@ class ShopItem(Base):
 
     name:           Mapped[str]
     description:    Mapped[str]
+    image_location: Mapped[str] #is processed with a prefix of /static/shop_images, so put pictures in that folder
 
     orders:         Mapped[list["Order"]] = relationship(back_populates="item")
 
