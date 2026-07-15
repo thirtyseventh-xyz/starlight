@@ -5,7 +5,7 @@ import sentry_sdk
 from flask import Blueprint, session, request, jsonify, abort
 from werkzeug.exceptions import HTTPException
 import utils.db
-from utils.models import User
+from utils.models import User, Order
 import utils.auth
 
 users_api = Blueprint("users_api", __name__, url_prefix="/api/user")
@@ -84,6 +84,21 @@ def get_all_hackatime_projects():
 
     except Exception as e:
         sentry_sdk.capture_exception(e,extras={"user_id":user.oidc_ident})
+        abort(500,description="internal_server_error")
+    finally:
+        db_session.close()
+
+@users_api.route("/me/orders")
+def get_all_orders():
+    db_session = utils.db.SessionLocal()
+    try:
+        user_id = session.get("user_id")
+
+        orders = db_session.query(Order).filter(Order.user_id == user_id).all()
+
+        return orders
+    except Exception as e:
+        sentry_sdk.capture_exception(e)
         abort(500,description="internal_server_error")
     finally:
         db_session.close()
