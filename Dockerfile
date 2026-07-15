@@ -21,5 +21,5 @@ COPY . .
 
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
-CMD ["sh", "-c", "uv run alembic upgrade head && exec .venv/bin/gunicorn --workers 4 --bind 0.0.0.0:8135 app:app"]
+CMD ["sh", "-c", "uv run alembic upgrade head && exec .venv/bin/python entrypoint.py"]
 STOPSIGNAL SIGINT
