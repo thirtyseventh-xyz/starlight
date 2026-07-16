@@ -34,14 +34,14 @@ class User(Base):
 
     orders:                     Mapped[list["Order"]] = relationship(back_populates="user")
 
-class Project(Base):
+class Project(Base): #a project and a partnership are basically the same thing
     __tablename__ = "projects"
 
     id:                 Mapped[int] = mapped_column(primary_key=True)
     users:              Mapped[list["User"]] = relationship(secondary=user_project_association, back_populates="associated_projects")
 
-    category:           Mapped[str]
-    slack_thread:       Mapped[str]
+    category:           Mapped[str|None]
+    slack_thread:       Mapped[str|None]
 
     hackatime_projects: Mapped[list[str]] = mapped_column(ARRAY(String))
     total_hours:        Mapped[int] = mapped_column(default=0,server_default="0")
