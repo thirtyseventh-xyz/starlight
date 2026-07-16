@@ -10,3 +10,10 @@ def get_user_info(slack_id:str) -> SlackResponse|None:
         return None
 
     return user_info
+
+def dm_user_blocks(slack_id:str,blocks:list,metadata:dict|None=None):
+    client.chat_postMessage(
+        channel=slack_id,
+        blocks=blocks,
+        metadata=metadata
+    )

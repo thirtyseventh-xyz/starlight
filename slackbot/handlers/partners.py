@@ -28,6 +28,11 @@ def partner_specific(ack,respond,command):
             partner=partner_id
         )
 
+        slackbot.utils.dm_user_blocks(
+            partner_id,
+            [{"type":"card","slack_icon":{"type":"icon","name":"comment"},"title":{"type":"mrkdwn","text":"@example wants to partner with you!","verbatim":False},"subtitle":{"type":"mrkdwn","text":"this is a partner request for <#C0AG9ASJ5U4|sparkle>","verbatim":False},"body":{"type":"mrkdwn","text":"@example wants to partner with (or teach or learn from) you as part of the <#C0AG9ASJ5U4|sparkle> ysws!","verbatim":False},"actions":[{"type":"button","style":"danger","text":{"type":"plain_text","text":"Decline","emoji":False},"action_id":"deny_personal_partner_request"},{"type":"button","style":"primary","text":{"type":"plain_text","text":"Accept","emoji":False},"action_id":"accept_personal_partner_request"}]}],
+            {"sender":user.slack_id,"partner":partner_id} # TODO: add this data to the button value so i actually get it on interaction
+        )
         db_session.add(request)
         db_session.commit()
 
