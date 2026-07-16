@@ -28,6 +28,7 @@ class User(Base):
 
     join_date:                  Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
+    active_partner_reqs:        Mapped[list['PartnerRequest']] = relationship(back_populates="creator")
     associated_projects:        Mapped[list["Project"]] = relationship(secondary=user_project_association, back_populates="users")
 
     last_session_clear_date:    Mapped[datetime.datetime|None] = mapped_column(DateTime(timezone=True))
@@ -80,4 +81,15 @@ class Order(Base):
     order_date: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     fulfilled:  Mapped[bool] = mapped_column(default=False, server_default=false())
+
+class PartnerRequest(Base):
+    __tablename__ = "partner_reqs"
+    id: Mapped[int] = mapped_column(primary_key=True)
+
+    creator: Mapped["User"] = relationship(back_populates="active_partner_reqs")
+    creator_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+
+    partner: Mapped[str|None] #str for slack id in a personal dm request, none for an open one
+
+    creation_date: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

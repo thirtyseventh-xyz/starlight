@@ -1,6 +1,6 @@
 import slack_bolt
 import utils.db
-from utils.models import User
+from utils.models import User, Project
 
 def register(app:slack_bolt.app.App):
     print("registered partnering handlers")
@@ -16,5 +16,6 @@ def partner_specific(ack,respond,command):
         if not user:
             respond("you have not setup your account yet! please login to your account at sparkle.dino.icu/auth/login")
             return
+
     finally:
         db_session.close()
