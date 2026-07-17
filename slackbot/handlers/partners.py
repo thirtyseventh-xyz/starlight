@@ -22,6 +22,7 @@ def partner_specific(ack,respond,command):
         partner_data = slackbot.utils.get_user_info(partner_id)
         if not partner_data:
             respond("the mentioned user does not exist!")
+            return
 
         request = PartnerRequest(
             creator=user,
