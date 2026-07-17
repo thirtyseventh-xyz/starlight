@@ -2,10 +2,12 @@ import slack_bolt
 import utils.db
 from utils.models import User, PartnerRequest
 import slackbot.utils
+import ast
 
 def register(app:slack_bolt.app.App):
     print("registered partnering handlers")
     app.command("/sparkle-partner")(partner_specific)
+    app.action({"action_id":"deny_personal_partner_request"})(partner_specific_reject_callback)
 
 def partner_specific(ack,respond,command):
     db_session = utils.db.SessionLocal()
@@ -37,5 +39,29 @@ def partner_specific(ack,respond,command):
         db_session.add(request)
         db_session.commit()
 
+    finally:
+        db_session.close()
+
+def partner_specific_reject_callback(ack,body,respond):
+    db_session = utils.db.SessionLocal()
+    try:
+        button_metadata = body['actions'][0]['value']
+        button_metadata = ast.literal_eval(button_metadata)
+
+        ack()
+
+        if button_metadata['partner'] != body['user']['id']:
+            respond("this request doesnt appear to be intended for you!")
+            return
+
+        req_creator = db_session.query(User).filter(User.slack_id == button_metadata['sender']).first()
+        partner_req = db_session.query(PartnerRequest).filter(PartnerRequest.partner == button_metadata['partner']).filter(PartnerRequest.creator == req_creator).first()
+
+        if partner_req.status != 0:
+
+            respond(text="this request was already accepted or rejected! im not sure how youre reading this")
+            return
+
+        partner_req.status = 2
     finally:
         db_session.close()
