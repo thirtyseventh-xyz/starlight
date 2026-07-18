@@ -1,4 +1,5 @@
 import slack_bolt
+from slack_sdk.errors import SlackApiError
 import utils.db
 from utils.models import User, PartnerRequest
 import slackbot.utils
@@ -21,10 +22,12 @@ def partner_specific(ack,respond,command):
             return
 
         partner_id = command['text'][2:13]
-        partner_data = slackbot.utils.get_user_info(partner_id)
-        if not partner_data:
-            respond("the mentioned user does not exist!")
-            return
+        try: partner_data = slackbot.utils.get_user_info(partner_id)
+        except SlackApiError as e:
+            if e.response['error'] == "user_not_found":
+                respond("the mentioned user does not exist!")
+                return
+            else: raise e
 
         request = PartnerRequest(
             creator=user,
