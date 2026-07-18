@@ -20,10 +20,10 @@ class User(Base):
     username:                   Mapped[str]
     slack_id:                   Mapped[str]
 
-    oidc_ident:                 Mapped[str]
-    hca_token:                  Mapped[str]
+    oidc_ident:                 Mapped[str|None]
+    hca_token:                  Mapped[str|None]
     hackatime_token:            Mapped[str|None]
-    eligible:                   Mapped[bool]
+    eligible:                   Mapped[bool|None]
     admin:                      Mapped[bool] = mapped_column(default=False, server_default=false())
 
     join_date:                  Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
