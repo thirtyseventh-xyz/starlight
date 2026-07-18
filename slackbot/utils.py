@@ -17,3 +17,9 @@ def dm_user_blocks(slack_id:str,blocks:list,metadata:dict|None=None):
         blocks=blocks,
         metadata=metadata
     )
+
+def dm_user(slack_id:str,message:str):
+    client.chat_postMessage(
+        channel=slack_id,
+        text=message
+    )

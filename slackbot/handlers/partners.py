@@ -9,6 +9,7 @@ def register(app:slack_bolt.app.App):
     print("registered partnering handlers")
     app.command("/sparkle-partner")(partner_specific)
     app.action({"action_id":"deny_personal_partner_request"})(partner_specific_reject_callback)
+    app.action({"action_id":"accept_personal_partner_request"})
 
 def partner_specific(ack,respond,command):
     db_session = utils.db.SessionLocal()
@@ -67,5 +68,6 @@ def partner_specific_reject_callback(ack,body,respond):
 
         respond(blocks=[{"type":"card","slack_icon":{"type":"icon","name":"comment"},"title":{"type":"mrkdwn","text":"@example wants to partner with you!","verbatim":False},"subtitle":{"type":"mrkdwn","text":"This is a partner request for <#C0AG9ASJ5U4|sparkle>","verbatim":False},"body":{"type":"mrkdwn","text":"@example wants to partner with (or teach or learn from) you as part of the <#C0AG9ASJ5U4|sparkle> ysws!","verbatim":False},"subtext":{"type":"mrkdwn","text":":ms-info: you have rejected this request","verbatim":False}}])
 
+        slackbot.utils.dm_user(button_metadata['sender'],"@example rejected your partner request :(")
     finally:
         db_session.close()
