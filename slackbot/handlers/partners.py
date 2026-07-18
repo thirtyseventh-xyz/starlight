@@ -51,17 +51,20 @@ def partner_specific_reject_callback(ack,body,respond):
         ack()
 
         if button_metadata['partner'] != body['user']['id']:
-            respond("this request doesnt appear to be intended for you!")
+            respond(blocks=[{"type":"card","slack_icon":{"type":"icon","name":"comment"},"title":{"type":"mrkdwn","text":"@example wants to partner with you!","verbatim":False},"subtitle":{"type":"mrkdwn","text":"This is a partner request for <#C0AG9ASJ5U4|sparkle>","verbatim":False},"body":{"type":"mrkdwn","text":"@example wants to partner with (or teach or learn from) you as part of the <#C0AG9ASJ5U4|sparkle> ysws!","verbatim":False},"subtext":{"type":"mrkdwn","text":":warning: this request doesnt seem to be intended for you!","verbatim":False}}])
             return
 
         req_creator = db_session.query(User).filter(User.slack_id == button_metadata['sender']).first()
         partner_req = db_session.query(PartnerRequest).filter(PartnerRequest.partner == button_metadata['partner']).filter(PartnerRequest.creator == req_creator).first()
 
         if partner_req.status != 0:
-
-            respond(text="this request was already accepted or rejected! im not sure how youre reading this")
+            respond(blocks=[{"type":"card","slack_icon":{"type":"icon","name":"comment"},"title":{"type":"mrkdwn","text":"@example wants to partner with you!","verbatim":False},"subtitle":{"type":"mrkdwn","text":"This is a partner request for <#C0AG9ASJ5U4|sparkle>","verbatim":False},"body":{"type":"mrkdwn","text":"@example wants to partner with (or teach or learn from) you as part of the <#C0AG9ASJ5U4|sparkle> ysws!","verbatim":False},"subtext":{"type":"mrkdwn","text":":warning: this request was already accepted or rejected!","verbatim":False}}])
             return
 
         partner_req.status = 2
+        db_session.commit()
+
+        respond(blocks=[{"type":"card","slack_icon":{"type":"icon","name":"comment"},"title":{"type":"mrkdwn","text":"@example wants to partner with you!","verbatim":False},"subtitle":{"type":"mrkdwn","text":"This is a partner request for <#C0AG9ASJ5U4|sparkle>","verbatim":False},"body":{"type":"mrkdwn","text":"@example wants to partner with (or teach or learn from) you as part of the <#C0AG9ASJ5U4|sparkle> ysws!","verbatim":False},"subtext":{"type":"mrkdwn","text":":ms-info: you have rejected this request","verbatim":False}}])
+
     finally:
         db_session.close()
