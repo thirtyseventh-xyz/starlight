@@ -39,8 +39,8 @@ def partner_specific(ack,respond,command):
 
         slackbot.utils.dm_user_blocks(
             partner_id,
-            [{"type":"card","slack_icon":{"type":"icon","name":"comment"},"title":{"type":"mrkdwn","text":"@example wants to partner with you!","verbatim":False},"subtitle":{"type":"mrkdwn","text":"This is a partner request for <#C0AG9ASJ5U4|sparkle>","verbatim":False},"body":{"type":"mrkdwn","text":"@example wants to partner with (or teach or learn from) you as part of the <#C0AG9ASJ5U4|sparkle> ysws!","verbatim":False},"actions":[{"type":"button","style":"danger","text":{"type":"plain_text","text":"Decline","emoji":False},"action_id":"deny_personal_partner_request","value":str({"sender":user.slack_id,"partner":partner_id,"request_id":request.id}),"confirm":{"title":{"type":"plain_text","text":"Are you sure?"},"text":{"type":"mrkdwn","text":"This will decline the invitation. This can't be undone."},"confirm":{"type":"plain_text","text":"Decline"},"deny":{"type":"plain_text","text":"Cancel"},"style":"danger"}},{"type":"button","style":"primary","text":{"type":"plain_text","text":"Accept","emoji":False},"action_id":"accept_personal_partner_request","value":str({"sender":user.slack_id,"partner":partner_id,"request_id":request.id}),"confirm":{"title":{"type":"plain_text","text":"Are you sure?"},"text":{"type":"mrkdwn","text":"This will accept the invitation and make you the sender's partner."},"confirm":{"type":"plain_text","text":"Accept"},"deny":{"type":"plain_text","text":"Cancel"},"style":"primary"}}]}]
-        )
+            [{"type":"card","slack_icon":{"type":"icon","name":"comment"},"title":{"type":"mrkdwn","text":f"<@{slack_id}> wants to partner with you!","verbatim":False},"subtitle":{"type":"mrkdwn","text":"This is a partner request for <#C0AG9ASJ5U4|sparkle>","verbatim":False},"body":{"type":"mrkdwn","text":f"<@{slack_id}> wants to partner with (or teach or learn from) you as part of the <#C0AG9ASJ5U4|sparkle> ysws!","verbatim":False},"actions":[{"type":"button","style":"danger","text":{"type":"plain_text","text":"Decline","emoji":False},"action_id":"deny_personal_partner_request","value":str({"sender":user.slack_id,"partner":partner_id,"request_id":request.id}),"confirm":{"title":{"type":"plain_text","text":"Are you sure?"},"text":{"type":"mrkdwn","text":"This will decline the invitation. This can't be undone."},"confirm":{"type":"plain_text","text":"Decline"},"deny":{"type":"plain_text","text":"Cancel"},"style":"danger"}},{"type":"button","style":"primary","text":{"type":"plain_text","text":"Accept","emoji":False},"action_id":"accept_personal_partner_request","value":str({"sender":user.slack_id,"partner":partner_id,"request_id":request.id}),"confirm":{"title":{"type":"plain_text","text":"Are you sure?"},"text":{"type":"mrkdwn","text":"This will accept the invitation and make you the sender's partner."},"confirm":{"type":"plain_text","text":"Accept"},"deny":{"type":"plain_text","text":"Cancel"},"style":"primary"}}]}]
+        ) #TODO: fix this ^^^, the mention makes the header too long and get truncated (also fix the other four instances of this)
     finally:
         db_session.close()
 
@@ -53,21 +53,21 @@ def partner_specific_reject_callback(ack,body,respond):
         ack()
 
         if button_metadata['partner'] != body['user']['id']:
-            respond(blocks=[{"type":"card","slack_icon":{"type":"icon","name":"comment"},"title":{"type":"mrkdwn","text":"@example wants to partner with you!","verbatim":False},"subtitle":{"type":"mrkdwn","text":"This is a partner request for <#C0AG9ASJ5U4|sparkle>","verbatim":False},"body":{"type":"mrkdwn","text":"@example wants to partner with (or teach or learn from) you as part of the <#C0AG9ASJ5U4|sparkle> ysws!","verbatim":False},"subtext":{"type":"mrkdwn","text":":warning: this request doesnt seem to be intended for you!","verbatim":False}}])
+            respond(blocks=[{"type":"card","slack_icon":{"type":"icon","name":"comment"},"title":{"type":"mrkdwn","text":f"<@{button_metadata['sender']}> wants to partner with you!","verbatim":False},"subtitle":{"type":"mrkdwn","text":"This is a partner request for <#C0AG9ASJ5U4|sparkle>","verbatim":False},"body":{"type":"mrkdwn","text":"@example wants to partner with (or teach or learn from) you as part of the <#C0AG9ASJ5U4|sparkle> ysws!","verbatim":False},"subtext":{"type":"mrkdwn","text":":warning: this request doesnt seem to be intended for you!","verbatim":False}}])
             return
 
         req_creator = db_session.query(User).filter(User.slack_id == button_metadata['sender']).first()
         partner_req = db_session.query(PartnerRequest).filter(PartnerRequest.id == button_metadata['request_id']).first()
 
         if partner_req.status != 0:
-            respond(blocks=[{"type":"card","slack_icon":{"type":"icon","name":"comment"},"title":{"type":"mrkdwn","text":"@example wants to partner with you!","verbatim":False},"subtitle":{"type":"mrkdwn","text":"This is a partner request for <#C0AG9ASJ5U4|sparkle>","verbatim":False},"body":{"type":"mrkdwn","text":"@example wants to partner with (or teach or learn from) you as part of the <#C0AG9ASJ5U4|sparkle> ysws!","verbatim":False},"subtext":{"type":"mrkdwn","text":":warning: this request was already accepted or rejected!","verbatim":False}}])
+            respond(blocks=[{"type":"card","slack_icon":{"type":"icon","name":"comment"},"title":{"type":"mrkdwn","text":f"<@{button_metadata['sender']}> wants to partner with you!","verbatim":False},"subtitle":{"type":"mrkdwn","text":"This is a partner request for <#C0AG9ASJ5U4|sparkle>","verbatim":False},"body":{"type":"mrkdwn","text":"@example wants to partner with (or teach or learn from) you as part of the <#C0AG9ASJ5U4|sparkle> ysws!","verbatim":False},"subtext":{"type":"mrkdwn","text":":warning: this request was already accepted or rejected!","verbatim":False}}])
             return
 
         partner_req.status = 2
         db_session.commit()
 
-        respond(blocks=[{"type":"card","slack_icon":{"type":"icon","name":"comment"},"title":{"type":"mrkdwn","text":"@example wants to partner with you!","verbatim":False},"subtitle":{"type":"mrkdwn","text":"This is a partner request for <#C0AG9ASJ5U4|sparkle>","verbatim":False},"body":{"type":"mrkdwn","text":"@example wants to partner with (or teach or learn from) you as part of the <#C0AG9ASJ5U4|sparkle> ysws!","verbatim":False},"subtext":{"type":"mrkdwn","text":":ms-info: you have rejected this request","verbatim":False}}])
+        respond(blocks=[{"type":"card","slack_icon":{"type":"icon","name":"comment"},"title":{"type":"mrkdwn","text":f"<@{button_metadata['sender']}> wants to partner with you!","verbatim":False},"subtitle":{"type":"mrkdwn","text":"This is a partner request for <#C0AG9ASJ5U4|sparkle>","verbatim":False},"body":{"type":"mrkdwn","text":"@example wants to partner with (or teach or learn from) you as part of the <#C0AG9ASJ5U4|sparkle> ysws!","verbatim":False},"subtext":{"type":"mrkdwn","text":":ms-info: you have rejected this request","verbatim":False}}])
 
-        slackbot.utils.dm_user(button_metadata['sender'],"@example rejected your partner request :(")
+        slackbot.utils.dm_user(button_metadata['sender'],f"<@{button_metadata['partner']}> rejected your partner request :(")
     finally:
         db_session.close()
